@@ -44,18 +44,22 @@ body.font-cinzel { font-family: 'Cinzel', serif; }
 body.font-pressstart { font-family: 'Press Start 2P', monospace; font-size: 10px; }
 body.font-win95 { font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
 
-/* --- Cursors --- */
+/* --- Precise Cursors with Exact (0, 0) Pointing Tip --- */
 body.cursor-sword, body.cursor-sword * {
-  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23ffd700" stroke="%233e2723" stroke-width="1.2" d="M3 21l3-1 9-9 3 1 4-4-3-3-4 4 1 3-9 9-1 3-2-2z"/><path fill="%23ffffff" d="M14 6l4 4"/></svg>') 0 0, auto !important;
+  /* Precision Gold Dagger with exact sharp tip at 0, 0 */
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23ffd700" stroke="%233e2723" stroke-width="1.2" d="M0 0l4 1 8 8 3-1 2 2-1 3 6 6-3 3-6-6-3 1-2-2 1-3-8-8z"/><path fill="%23ffffff" d="M1 1l3 1 7 7"/></svg>') 0 0, auto !important;
 }
 body.cursor-pickaxe, body.cursor-pickaxe * {
-  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%2378909c" stroke="%23263238" stroke-width="1.2" d="M19 2c-3 1-8 5-11 9l4 4c4-3 8-8 9-11l-2-2z"/><path fill="%238d6e63" stroke="%233e2723" stroke-width="1" d="M4 22l6-6-2-2-6 6 2 2z"/></svg>') 0 0, auto !important;
+  /* Precision Sapper Pickaxe with sharp pick tip at 0, 0 */
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23b0bec5" stroke="%23263238" stroke-width="1.2" d="M0 0c6 0 12 3 15 8l-3 3c-3-3-8-4-12-3z"/><path fill="%238d6e63" stroke="%233e2723" stroke-width="2" d="M8 8l13 13-2 2-13-13z"/></svg>') 0 0, auto !important;
 }
 body.cursor-gauntlet, body.cursor-gauntlet * {
-  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23b0bec5" stroke="%23263238" stroke-width="1.2" d="M5 14v4l4 4h6l4-4v-8l-4-4h-4l-2 2-2-1-2 1v6z"/></svg>') 0 0, auto !important;
+  /* Precision Gold Arrow Pointer with drop shadow and sharp tip at 0, 0 */
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23ffd700" stroke="%23000" stroke-width="1.5" d="M0 0l6 18 4-6 7 7 2-2-7-7 7-2z"/><path fill="%23ffffff" d="M2 3l3 10 2-4 1-1 4 4 1-1-4-4 1-1z"/></svg>') 0 0, auto !important;
 }
 body.cursor-classic, body.cursor-classic * {
-  cursor: default !important;
+  /* Classic Win95 sharp arrow tip at 0, 0 */
+  cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="%23fff" stroke="%23000" stroke-width="1.5" d="M0 0l6 16 3-5 5 5 2-2-5-5 6-1z"/></svg>') 0 0, auto !important;
 }
 
 /* --- Theme Container Styles --- */
@@ -68,16 +72,26 @@ body.theme-win95 {
   background-color: #008080;
 }
 
+/* Full HD 1920x1080 Optimized Window Dimensions */
 .game-window {
   display: flex;
   flex-direction: column;
   width: 98vw;
-  max-width: 1220px;
+  max-width: 1880px;
   height: 96vh;
-  max-height: 900px;
+  max-height: 1040px;
   position: relative;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
   transition: all 0.2s ease;
+}
+
+.game-window.fullscreen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  border-radius: 0 !important;
+  border-width: 4px !important;
 }
 
 body.theme-colonization .game-window {

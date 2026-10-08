@@ -211,9 +211,11 @@ class KeepsweeperGame {
           terrain = 'water'; // Deep ocean
         }
 
+        const isOcean = (terrain === 'water' || terrain === 'sea');
+
         row.push({
           x, y,
-          covered: true,
+          covered: !isOcean,
           flagged: false,
           oracleFlag: false,
           crater: false,
@@ -435,6 +437,11 @@ class KeepsweeperGame {
     this.isVictory = false;
     this.blundersCount = 0;
     this.uncoveredCount = 0;
+    this.movesCount = 0;
+    this.score = 0.0;
+    this.lastHeroMilestone = 0;
+    this.heroLevel = 1;
+    this.unlockedHeroPerks = [this.activeHeroPerk];
     this.hasBlastShield = (this.activeHeroPerk === 'iron_skin');
     this.activePower = null;
     this.digQueue = [];
@@ -455,6 +462,12 @@ class KeepsweeperGame {
     this.catapultStones = [];
 
     this.generateContinentalMap();
+
+    // Compute realistic target for continent exploration
+    const safeLand = this.grid.flat().filter(t => (t.terrain === 'grass' || t.terrain === 'trees') && !t.danger).length;
+    this.safeLandTilesTotal = safeLand;
+    this.uncoveredTarget = Math.max(35, Math.floor(safeLand * 0.82));
+
     this.centerCamera();
     this.updateUI();
     this.updateSettlementBadge();
@@ -587,6 +600,22 @@ class KeepsweeperGame {
     if (button === 2 || (button === 0 && this.flagMode)) {
       if (tile.covered) {
         tile.flagged = !tile.flagged;
+        this.movesCount++;
+        if (tile.flagged) {
+          if (tile.danger) {
+            // Correct flag placed on danger/mine: +0.1 point!
+            this.score = Math.round((this.score + 0.1) * 10) / 10;
+            tile.accuracyScored = true;
+            this.addFloatingText('+0.1 pkt 🎯', tx * this.tileSize + 20, ty * this.tileSize - 10, '#00e676');
+            this.notify('🎯 Trafna flaga na minie! Przyznano +0.1 punktu prestiżu!', '🚩');
+          }
+        } else {
+          // Flag removed: deduct if previously scored
+          if (tile.accuracyScored) {
+            this.score = Math.max(0, Math.round((this.score - 0.1) * 10) / 10);
+            tile.accuracyScored = false;
+          }
+        }
         sfx.playFlag();
         this.updateUI();
         this.renderMinimap();
@@ -611,6 +640,7 @@ class KeepsweeperGame {
     // Left-click on Covered Tile: DISPATCH NEAREST SAPPER TO DIG!
     if (tile.covered) {
       if (tile.flagged || tile.oracleFlag) return; // Protected
+      this.movesCount++;
       this.dispatchSapperToDig(tx, ty);
     } else {
       if (tile.adjacentDangers > 0) {
@@ -760,8 +790,27 @@ class KeepsweeperGame {
   uncoverSafeTile(tx, ty) {
     const tile = this.grid[ty][tx];
     if (!tile.covered) return;
+    if (tile.terrain === 'water' || tile.terrain === 'sea') return;
     tile.covered = false;
     this.uncoveredCount++;
+
+    // Hero progression: unlock a new hero ability / level every 10 uncovered tiles!
+    const currentMilestone = Math.floor(this.uncoveredCount / 10);
+    if (currentMilestone > this.lastHeroMilestone && this.uncoveredCount >= 10) {
+      this.lastHeroMilestone = currentMilestone;
+      this.heroLevel = (this.heroLevel || 1) + 1;
+
+      const availablePerks = this.heroPerks.filter(p => !this.unlockedHeroPerks.includes(p.id));
+      let newPerk = null;
+      if (availablePerks.length > 0) {
+        newPerk = availablePerks[Math.floor(Math.random() * availablePerks.length)];
+        this.unlockedHeroPerks.push(newPerk.id);
+      }
+      sfx.playVictory();
+      this.addFloatingText(`🌟 AWANS BOHATERA! Poz. ${this.heroLevel}`, tx * this.tileSize + 20, ty * this.tileSize - 20, '#e040fb');
+      const perkMsg = newPerk ? ` Odblokowano talent: ${newPerk.name} ${newPerk.icon}!` : ` Wzmocniono siłę dowódcy!`;
+      this.notify(`🌟 AWANS BOHATERA (Poziom ${this.heroLevel}) za ${this.uncoveredCount} odkrytych pól!${perkMsg}`, '⚡');
+    }
 
     // Resources increase for revealed tiles!
     const midasBonus = this.activeHeroPerk === 'midas_touch' ? 1.5 : 1.0;
@@ -812,10 +861,26 @@ class KeepsweeperGame {
           const ny = cy + dy;
           if (this.isValidTile(nx, ny)) {
             const nTile = this.grid[ny][nx];
+            // Stop water/ocean from cascading!
+            if (nTile.terrain === 'water' || nTile.terrain === 'sea') continue;
             if (nTile.covered && !nTile.flagged && !nTile.oracleFlag && !nTile.danger) {
               nTile.covered = false;
               this.uncoveredCount++;
               this.resources += 1;
+
+              // Check hero unlock milestone during cascade as well!
+              const currentMilestone = Math.floor(this.uncoveredCount / 10);
+              if (currentMilestone > this.lastHeroMilestone && this.uncoveredCount >= 10) {
+                this.lastHeroMilestone = currentMilestone;
+                this.heroLevel = (this.heroLevel || 1) + 1;
+                const availablePerks = this.heroPerks.filter(p => !this.unlockedHeroPerks.includes(p.id));
+                if (availablePerks.length > 0) {
+                  const newPerk = availablePerks[Math.floor(Math.random() * availablePerks.length)];
+                  this.unlockedHeroPerks.push(newPerk.id);
+                  this.notify(`🌟 AWANS BOHATERA (Poz. ${this.heroLevel}): Odblokowano ${newPerk.name} ${newPerk.icon}!`, '⚡');
+                }
+              }
+
               if (nTile.adjacentDangers === 0) queue.push([nx, ny]);
             }
           }
@@ -825,6 +890,7 @@ class KeepsweeperGame {
   }
 
   chordTile(tx, ty) {
+    this.movesCount++;
     const tile = this.grid[ty][tx];
     let flagsCount = 0;
     for (let dy = -1; dy <= 1; dy++) {
@@ -1361,6 +1427,9 @@ class KeepsweeperGame {
     const skuchyEl = document.getElementById('skuchyCounter');
     if (skuchyEl) skuchyEl.textContent = this.blundersCount.toString();
 
+    const scoreEl = document.getElementById('scoreCounter');
+    if (scoreEl) scoreEl.textContent = `${this.score.toFixed(1)} pts`;
+
     const timerEl = document.getElementById('levelTimer');
     if (timerEl) {
       const mins = Math.floor(this.elapsedSeconds / 60).toString().padStart(2, '0');
@@ -1381,7 +1450,7 @@ class KeepsweeperGame {
     if (heroBadge) {
       const p = this.heroPerks.find(x => x.id === this.activeHeroPerk);
       if (p) {
-        heroBadge.innerHTML = `<span>${p.icon}</span><span>${p.name}</span>`;
+        heroBadge.innerHTML = `<span>${p.icon}</span><span>${p.name} (Poz. ${this.heroLevel || 1})</span>`;
       }
     }
   }
@@ -1389,6 +1458,9 @@ class KeepsweeperGame {
   // --- End of Game & Match History Streak Recording ---
   checkVictoryCondition() {
     if (this.isGameOver) return;
+
+    // Victory guard: prevents premature victory before uncovering at least 25 continental tiles!
+    if (this.uncoveredCount < 25) return;
 
     if (this.uncoveredCount >= this.uncoveredTarget) {
       this.recordMatchOutcome(true);
@@ -1415,7 +1487,9 @@ class KeepsweeperGame {
       time: timeStr,
       seconds: this.elapsedSeconds,
       blunders: this.blundersCount,
-      gold: this.resources
+      gold: this.resources,
+      moves: this.movesCount,
+      score: this.score.toFixed(1)
     };
 
     this.matchHistory.unshift(matchRecord);
@@ -1433,10 +1507,10 @@ class KeepsweeperGame {
 
       if (title) title.textContent = won ? 'ZWYCIĘSTWO!' : 'PORAŻKA!';
       if (title) title.style.color = won ? '#2e7d32' : '#c62828';
-      if (desc) desc.textContent = won ? 'Nowy Świat został bezpiecznie zbadany i skolonizowany!' : 'Wszyscy saperzy polegli na polu minowym...';
+      if (desc) desc.textContent = won ? `Nowy Świat został bezpiecznie zbadany i skolonizowany w ${this.movesCount} ruchach!` : 'Wszyscy saperzy polegli na polu minowym...';
       if (timeVal) timeVal.textContent = timeStr;
       if (blundersVal) blundersVal.textContent = `${this.blundersCount} 💥`;
-      if (goldVal) goldVal.textContent = `+${this.resources} 💰`;
+      if (goldVal) goldVal.textContent = `+${this.resources} 💰 (${this.score.toFixed(1)} pts)`;
 
       modal.style.display = 'flex';
     }
@@ -1451,14 +1525,14 @@ class KeepsweeperGame {
     const h = chartCanvas.height;
 
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#263238';
+    ctx.fillStyle = '#1e282d';
     ctx.fillRect(0, 0, w, h);
 
     // Filter by commander
     const list = this.matchHistory.filter(m => m.commander === commander).slice(0, 16).reverse();
 
     if (list.length === 0) {
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = '#b0bec5';
       ctx.font = '12px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('Brak rozegranych meczów dla tego dowódcy. Rozpocznij grę!', w / 2, h / 2);
@@ -1466,45 +1540,66 @@ class KeepsweeperGame {
     }
 
     // Grid lines
-    ctx.strokeStyle = '#37474f';
+    ctx.strokeStyle = '#2d3e46';
     ctx.lineWidth = 1;
-    for (let y = 30; y < h - 20; y += 30) {
+    for (let y = 30; y < h - 25; y += 30) {
       ctx.beginPath();
-      ctx.moveTo(30, y);
-      ctx.lineTo(w - 20, y);
+      ctx.moveTo(35, y);
+      ctx.lineTo(w - 15, y);
       ctx.stroke();
     }
 
-    const barWidth = Math.min(26, (w - 60) / list.length);
+    const barWidth = Math.min(28, (w - 70) / list.length);
     const gap = 8;
     const startX = 40;
 
-    // 1. Draw Outcome Bars (Green = Win, Red = Loss)
+    // 1. Draw Outcome Bars (Green = Win, Red = Loss) with Moves Count above
     list.forEach((m, idx) => {
       const x = startX + idx * (barWidth + gap);
-      const barH = m.won ? 90 : 45;
-      const y = h - 30 - barH;
+      const moves = m.moves || 0;
+      const barH = m.won ? Math.min(105, 55 + Math.min(moves, 40)) : Math.min(85, 35 + Math.min(moves, 30));
+      const y = h - 32 - barH;
 
-      ctx.fillStyle = m.won ? '#4caf50' : '#f44336';
+      // Bar gradient fill
+      const grad = ctx.createLinearGradient(x, y, x, y + barH);
+      if (m.won) {
+        grad.addColorStop(0, '#66bb6a');
+        grad.addColorStop(1, '#2e7d32');
+      } else {
+        grad.addColorStop(0, '#ef5350');
+        grad.addColorStop(1, '#c62828');
+      }
+
+      ctx.fillStyle = grad;
       ctx.fillRect(x, y, barWidth, barH);
-      ctx.strokeStyle = '#000';
+      ctx.strokeStyle = m.won ? '#81c784' : '#e57373';
+      ctx.lineWidth = 1;
       ctx.strokeRect(x, y, barWidth, barH);
 
-      // Label index
-      ctx.fillStyle = '#cfd8dc';
-      ctx.font = '9px sans-serif';
+      // Label: Outcome & Moves count ("W 14r" / "L 8r") above bar
+      ctx.fillStyle = m.won ? '#a5d6a7' : '#ffab91';
+      ctx.font = 'bold 9px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`#${idx + 1}`, x + barWidth / 2, h - 14);
+      const labelOutcome = m.won ? `🏆 ${moves}r` : `💥 ${moves}r`;
+      ctx.fillText(labelOutcome, x + barWidth / 2, y - 6);
+
+      // Label: Match number / time below bar
+      ctx.fillStyle = '#90a4ae';
+      ctx.font = '9px sans-serif';
+      ctx.fillText(`#${idx + 1}`, x + barWidth / 2, h - 18);
+      ctx.fillStyle = '#78909c';
+      ctx.font = '8px sans-serif';
+      ctx.fillText(m.date || '', x + barWidth / 2, h - 6);
     });
 
     // 2. Draw Yellow Blunders Trend Curve ("Krzywa skuch")
-    ctx.strokeStyle = '#ffeb3b';
+    ctx.strokeStyle = '#ffd600';
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     list.forEach((m, idx) => {
       const x = startX + idx * (barWidth + gap) + barWidth / 2;
-      const blundersNorm = Math.min(100, m.blunders * 25);
-      const y = (h - 35) - blundersNorm;
+      const blundersNorm = Math.min(80, (m.blunders || 0) * 20);
+      const y = (h - 40) - blundersNorm;
       if (idx === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     });
@@ -1513,19 +1608,22 @@ class KeepsweeperGame {
     // Draw yellow dots for blunders
     list.forEach((m, idx) => {
       const x = startX + idx * (barWidth + gap) + barWidth / 2;
-      const blundersNorm = Math.min(100, m.blunders * 25);
-      const y = (h - 35) - blundersNorm;
-      ctx.fillStyle = '#ffd600';
+      const blundersNorm = Math.min(80, (m.blunders || 0) * 20);
+      const y = (h - 40) - blundersNorm;
+      ctx.fillStyle = '#ffea00';
       ctx.beginPath();
-      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1;
+      ctx.stroke();
     });
 
     // Compute Career Stats
     const total = list.length;
     const wins = list.filter(m => m.won).length;
     const winrate = ((wins / total) * 100).toFixed(1);
-    const avgBlunders = (list.reduce((acc, m) => acc + m.blunders, 0) / total).toFixed(1);
+    const avgBlunders = (list.reduce((acc, m) => acc + (m.blunders || 0), 0) / total).toFixed(1);
 
     const totalEl = document.getElementById('statTotalMatches');
     const winrateEl = document.getElementById('statWinrate');
@@ -1542,6 +1640,22 @@ class KeepsweeperGame {
     }
     const streakBadge = document.getElementById('currentStreakBadge');
     if (streakBadge) streakBadge.innerHTML = streak > 0 ? `🔥 Pasmo: <b>${streak} zwycięstw z rzędu</b>` : `❄️ Pasmo: <b>Przerwana seria</b>`;
+
+    // Populate Recent Matches Log Table
+    const tbody = document.getElementById('recentMatchesBody');
+    if (tbody) {
+      tbody.innerHTML = list.slice().reverse().map(m => `
+        <tr>
+          <td>${m.date || '--:--'}</td>
+          <td><b>${m.mode || 'Nowy Świat'}</b> (Poz. ${m.level || 1})</td>
+          <td><span style="color: ${m.won ? '#2e7d32' : '#c62828'}; font-weight: bold;">${m.won ? '🏆 Wygrana' : '💥 Porażka'}</span></td>
+          <td><b>${m.moves || 0} ruchów</b></td>
+          <td>${m.time || '00:00'}</td>
+          <td><span style="color: #c62828; font-weight: bold;">${m.blunders || 0}</span></td>
+          <td><b>${m.gold || 0} 💰</b></td>
+        </tr>
+      `).join('');
+    }
   }
 
   // --- Setup UI Handlers (Safe Check on All DOM Elements) ---
@@ -1692,6 +1806,43 @@ class KeepsweeperGame {
         this.renderMatchHistoryChart(this.activeCommander);
       });
     }
+
+    // Window Controls (Maximize / Fullscreen, Minimize)
+    bindClick('btnMaximize', () => {
+      const win = document.getElementById('appWindow');
+      if (win) {
+        win.classList.toggle('fullscreen');
+        this.resizeCanvas();
+        this.centerCamera();
+      }
+    });
+
+    bindClick('btnMinimize', () => {
+      this.notify('Keepsweeper: Okno zminimalizowane. Kliknij ponownie, aby powrócić.', '🗕');
+    });
+
+    bindClick('btnCloseApp', () => {
+      this.notify('🏰 Keepsweeper: Sesja aktywna w przeglądarce.', '🏰');
+    });
+
+    bindClick('btnClearHistory', () => {
+      if (confirm('Czy na pewno chcesz wyczyścić historię ostatnich meczów?')) {
+        this.matchHistory = [];
+        localStorage.removeItem('ks_match_history');
+        this.renderMatchHistoryChart(this.activeCommander);
+        this.notify('Wyczyszczono historię meczów dowódcy.', '🗑️');
+      }
+    });
+
+    // Left Civ Sidebar Shortcuts
+    bindClick('btnLeftWorld', () => this.centerCamera());
+    bindClick('btnLeftQuests', () => {
+      const qm = document.getElementById('modalQuests');
+      if (qm) qm.style.display = 'flex';
+    });
+    bindClick('btnLeftSettlements', () => {
+      this.notify(`Twój rozwój: ${document.getElementById('settlementName')?.textContent || 'Obóz'} (Odkryto: ${this.uncoveredCount} pól)`, '🏘️');
+    });
 
     bindClick('btnEndgameShowStats', () => {
       document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');

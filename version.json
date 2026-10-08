@@ -1,18 +1,13 @@
 {
-  "version": "1.4.0",
-  "build": "20261008.1630",
-  "releaseDate": "2026-10-08 16:30",
+  "version": "1.4.1",
+  "build": "20261008.1645",
+  "releaseDate": "2026-10-08 16:45",
   "features": [
-    "Kształty kontynentów, oceaniczne wybrzeże i start wyprawy przy brzegu",
-    "Przesuwanie kamery Middle Mouse (środkowym przyciskiem) oraz klikaniem na minimapce",
-    "Rywale SI (Hiszpania i Francja) powoli badający mapę w tempie gracza z własnymi skarbami i skuchami",
-    "Fizyczne bieganie saperów do wyznaczonych pól i ryzyko śmierci przy wybuchu miny",
-    "12 losowych talentów SuperBohatera (1% auto-odkrycie, 3% niewybuch, Midas, Hermes, itp.)",
-    "Zagraniczny Trakt Handlowy (handel złotem, reliktami i karawany do Nowego Świata)",
-    "Karta Inspektora Terenu w prawym dolnym rogu z koordynatami [X x Y], zagrożeniem i bonusami",
-    "Oryginalne kolory cyfr Sapera 1-8 i przycisk Dźwięk ON/OFF w belce tytułowej",
-    "Wykres pasma ostatnich meczy (Streak) i krzywa skuch pod profilami zawodników",
-    "Podwójny silnik: Kolonizacja (Civ/RPG) ⇄ Klasyczny Saper Windows 95",
-    "Czcionki Google (Montserrat, Lato, Cinzel) oraz retro kursory w Ustawieniach"
+    "Optymalizacja Full HD 1920x1080 z prawdziwym trybem pełnoekranowym (przycisk □ w belce)",
+    "Usunięcie błędu przedwczesnego zwycięstwa po 1 kratce (zabezpieczenie kaskady oceanicznej i próg 25 pól)",
+    "Wykres pasma meczy i tabela z dokładnym licznikiem ruchów do wygranej/przegranej (np. 🏆 14r. / 💥 8r.)",
+    "System awansu i odblokowywania nowych talentów SuperBohatera co każde 10 odkrytych pól",
+    "Punkty celności za flagi: +0.1 pkt prestiżu za każdą poprawnie oznaczoną minę/niebezpieczeństwo",
+    "Ultra-precyzyjne kursory (Złoty Sztylet, Kilof, Precyzyjna Strzałka, Win95) wskazujące wierzchołkiem na (0,0)"
   ]
 }
