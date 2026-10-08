@@ -32,7 +32,7 @@ body {
   align-items: center;
   overflow: hidden;
   font-family: var(--font-current);
-  font-size: 12px;
+  font-size: 13.5px;
   background-color: #1e382b;
   transition: background-color 0.3s;
 }
@@ -41,7 +41,7 @@ body {
 body.font-montserrat { font-family: 'Montserrat', sans-serif; }
 body.font-lato { font-family: 'Lato', sans-serif; }
 body.font-cinzel { font-family: 'Cinzel', serif; }
-body.font-pressstart { font-family: 'Press Start 2P', monospace; font-size: 10px; }
+body.font-pressstart { font-family: 'Press Start 2P', monospace; font-size: 11px; }
 body.font-win95 { font-family: 'Segoe UI', Tahoma, Verdana, sans-serif; }
 
 /* --- Precise Cursors with Exact (0, 0) Pointing Tip --- */
@@ -70,6 +70,21 @@ body.theme-colonization {
 
 body.theme-win95 {
   background-color: #008080;
+}
+
+body.theme-light {
+  background-color: #d8cebc;
+  background-image: radial-gradient(#ece4d4 20%, #c4b69e 100%);
+}
+
+body.theme-meadow {
+  background-color: #244829;
+  background-image: radial-gradient(#35693c 20%, #153119 100%);
+}
+
+body.theme-azure {
+  background-color: #0d324d;
+  background-image: radial-gradient(#18527a 20%, #081d2e 100%);
 }
 
 /* Full HD 1920x1080 Optimized Window Dimensions */
@@ -110,6 +125,30 @@ body.theme-win95 .game-window {
   border-radius: 0;
 }
 
+body.theme-light .game-window {
+  background: #fbf8f2;
+  border: 7px solid #8d7b68;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  color: #212121;
+}
+
+body.theme-meadow .game-window {
+  background: #eef7ed;
+  border: 7px solid #2e7d32;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  color: #1b3815;
+}
+
+body.theme-azure .game-window {
+  background: #f0f9ff;
+  border: 7px solid #0277bd;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  color: #012e4a;
+}
+
 /* Title Bar */
 .win95-titlebar {
   display: flex;
@@ -117,7 +156,7 @@ body.theme-win95 .game-window {
   justify-content: space-between;
   padding: 4px 8px;
   font-weight: bold;
-  height: 32px;
+  height: 34px;
   flex-shrink: 0;
 }
 
@@ -131,6 +170,27 @@ body.theme-colonization .win95-titlebar {
 body.theme-win95 .win95-titlebar {
   background: linear-gradient(90deg, var(--win-blue), var(--win-blue-grad));
   color: white;
+}
+
+body.theme-light .win95-titlebar {
+  background: linear-gradient(90deg, #4b6584, #6c88a8, #4b6584);
+  color: #ffffff;
+  border-bottom: 2px solid #33475b;
+  text-shadow: 1px 1px 2px #000;
+}
+
+body.theme-meadow .win95-titlebar {
+  background: linear-gradient(90deg, #1b5e20, #388e3c, #1b5e20);
+  color: #ffffff;
+  border-bottom: 2px solid #0f3d13;
+  text-shadow: 1px 1px 2px #000;
+}
+
+body.theme-azure .win95-titlebar {
+  background: linear-gradient(90deg, #01579b, #0288d1, #01579b);
+  color: #ffffff;
+  border-bottom: 2px solid #003660;
+  text-shadow: 1px 1px 2px #000;
 }
 
 .title-left {
@@ -228,8 +288,26 @@ body.theme-win95 .win95-menubar {
   border-bottom: 1px solid var(--win-dark);
 }
 
+body.theme-light .win95-menubar {
+  background: #ede6d6;
+  color: #2d3436;
+  border-bottom: 2px solid #c8bda7;
+}
+
+body.theme-meadow .win95-menubar {
+  background: #e0f0df;
+  color: #143513;
+  border-bottom: 2px solid #a5d6a7;
+}
+
+body.theme-azure .win95-menubar {
+  background: #e1f5fe;
+  color: #013a5e;
+  border-bottom: 2px solid #81d4fa;
+}
+
 .menu-item {
-  padding: 3px 8px;
+  padding: 4px 9px;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -237,7 +315,12 @@ body.theme-win95 .win95-menubar {
   border-radius: 3px;
   font-weight: 700;
   color: #fff8e1;
+  font-size: 13px;
 }
+
+body.theme-light .menu-item { color: #2d3436; }
+body.theme-meadow .menu-item { color: #143513; }
+body.theme-azure .menu-item { color: #013a5e; }
 
 .menu-item:hover {
   background: #ffb300;
@@ -257,9 +340,9 @@ body.theme-win95 .menu-item:hover {
   background: #ff9800;
   color: #000;
   font-weight: bold;
-  padding: 0px 5px;
+  padding: 1px 6px;
   border-radius: 8px;
-  font-size: 10px;
+  font-size: 11px;
 }
 
 /* --- Top Colonization Ribbon --- */
@@ -267,7 +350,7 @@ body.theme-win95 .menu-item:hover {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 10px;
+  padding: 5px 12px;
   gap: 8px;
   flex-wrap: nowrap;
   flex-shrink: 0;
@@ -288,17 +371,53 @@ body.theme-win95 .colonization-ribbon {
   color: #212121;
 }
 
+body.theme-light .colonization-ribbon {
+  background: #f4eedf;
+  color: #222;
+  border-bottom: 2px solid #b8ab94;
+}
+
+body.theme-meadow .colonization-ribbon {
+  background: #d4ebd2;
+  color: #143513;
+  border-bottom: 2px solid #81c784;
+}
+
+body.theme-azure .colonization-ribbon {
+  background: #d1effe;
+  color: #013a5e;
+  border-bottom: 2px solid #4fc3f7;
+}
+
 .ribbon-item {
   display: flex;
   align-items: center;
   gap: 6px;
   background: #180c04;
   border: 1px solid #4d2b12;
-  padding: 3px 8px;
+  padding: 4px 9px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  white-space: nowrap;
+}
+
+body.theme-light .ribbon-item {
+  background: #ffffff;
+  border-color: #d1c7b2;
+  color: #212121;
+}
+
+body.theme-meadow .ribbon-item {
+  background: #ffffff;
+  border-color: #a5d6a7;
+  color: #1b3815;
+}
+
+body.theme-azure .ribbon-item {
+  background: #ffffff;
+  border-color: #81d4fa;
+  color: #013a5e;
+}  white-space: nowrap;
   color: #fff;
 }
 
@@ -642,12 +761,27 @@ body.theme-colonization .game-viewport {
   border: 1px solid #ffb300;
 }
 
+body.theme-light .tile-inspector-box {
+  background: #ffffff;
+  border: 1px solid #b8ab94;
+}
+
+body.theme-meadow .tile-inspector-box {
+  background: #ffffff;
+  border: 1px solid #81c784;
+}
+
+body.theme-azure .tile-inspector-box {
+  background: #ffffff;
+  border: 1px solid #4fc3f7;
+}
+
 .coord-tag {
   background: #ffd54f;
   color: #000;
   padding: 1px 6px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   font-family: monospace;
 }
@@ -655,22 +789,98 @@ body.theme-colonization .game-viewport {
 .tile-terrain-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 6px;
 }
 
-.terrain-icon { font-size: 22px; }
+.tile-thumbnail-box {
+  width: 48px;
+  height: 48px;
+  background: #110803;
+  border: 2px solid #ffd54f;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+}
+
+body.theme-light .tile-thumbnail-box {
+  background: #ede6d6;
+  border-color: #8d7b68;
+}
+
+body.theme-meadow .tile-thumbnail-box {
+  background: #e8f5e9;
+  border-color: #2e7d32;
+}
+
+body.theme-azure .tile-thumbnail-box {
+  background: #e1f5fe;
+  border-color: #0277bd;
+}
+
+#tileThumbnailCanvas {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  display: block;
+}
+
+.terrain-icon { font-size: 24px; }
 
 .terrain-meta b {
-  font-size: 12px;
+  font-size: 13.5px;
   color: #ffffff;
   display: block;
 }
 
+body.theme-light .terrain-meta b { color: #212121; }
+body.theme-meadow .terrain-meta b { color: #143513; }
+body.theme-azure .terrain-meta b { color: #013a5e; }
+
 #tileDangerLevel {
-  font-size: 10px;
+  font-size: 11px;
   color: #ffab91 !important;
   font-weight: bold;
+}
+
+body.theme-light #tileDangerLevel,
+body.theme-meadow #tileDangerLevel,
+body.theme-azure #tileDangerLevel {
+  color: #d32f2f !important;
+}
+
+.tile-action-desc {
+  background: rgba(0, 0, 0, 0.45);
+  border-left: 3px solid #ffb300;
+  padding: 5px 8px;
+  border-radius: 3px;
+  font-size: 11.5px;
+  color: #ffe082;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+body.theme-light .tile-action-desc {
+  background: #f5f0e6;
+  color: #3e2723;
+  border-left-color: #8d7b68;
+}
+
+body.theme-meadow .tile-action-desc {
+  background: #f1f8e9;
+  color: #1b5e20;
+  border-left-color: #2e7d32;
+}
+
+body.theme-azure .tile-action-desc {
+  background: #e0f7fa;
+  color: #006064;
+  border-left-color: #0288d1;
 }
 
 .tile-bonuses-list {
@@ -682,6 +892,10 @@ body.theme-colonization .game-viewport {
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
+
+body.theme-light .tile-bonuses-list { background: #f0eae1; border-color: #d1c7b2; }
+body.theme-meadow .tile-bonuses-list { background: #e8f5e9; border-color: #a5d6a7; }
+body.theme-azure .tile-bonuses-list { background: #e1f5fe; border-color: #81d4fa; }
 
 .bonus-pill {
   font-size: 10px;

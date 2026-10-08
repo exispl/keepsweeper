@@ -35,9 +35,11 @@ class KeepsweeperGame {
     // Session State
     this.mode = 'dragon';
     this.level = 1;
+    this.difficulty = localStorage.getItem('ks_difficulty') || 'intermediate'; // 'beginner', 'intermediate', 'expert'
+    this.seenDiscoveries = JSON.parse(localStorage.getItem('ks_discoveries') || '{}');
     this.gridWidth = 28;
-    this.gridHeight = 22;
-    this.tileSize = 40;
+    this.gridHeight = 20;
+    this.tileSize = 48; // Enlarged from 40 to 48 for larger tiles and more graphic detail
 
     // Economy & Tracking
     this.year = 1521;
@@ -371,8 +373,9 @@ class KeepsweeperGame {
       }
     }
 
-    // Mines & Traps Quota
-    const dangerDensity = 0.13 + (this.level * 0.005);
+    // Mines & Traps Quota (based on 3 difficulty levels: beginner 10%, intermediate 15%, expert 21%)
+    const baseDensity = this.difficulty === 'beginner' ? 0.10 : (this.difficulty === 'expert' ? 0.21 : 0.15);
+    const dangerDensity = baseDensity + (this.level * 0.003);
     const totalLandTiles = this.grid.flat().filter(t => t.terrain !== 'water' && t.terrain !== 'sea').length;
     let mineQuota = Math.floor(totalLandTiles * dangerDensity);
 
@@ -432,6 +435,24 @@ class KeepsweeperGame {
   startLevel(mode, level) {
     this.mode = mode;
     this.level = level;
+
+    // Difficulty Settings: Adjust grid size & sappers corps
+    if (this.difficulty === 'beginner') {
+      this.gridWidth = 22;
+      this.gridHeight = 16;
+      this.sappersMax = this.techsUnlocked.includes('resSapperAcademy') ? 6 : 5;
+    } else if (this.difficulty === 'expert') {
+      this.gridWidth = 34;
+      this.gridHeight = 22;
+      this.sappersMax = this.techsUnlocked.includes('resSapperAcademy') ? 3 : 2;
+    } else {
+      // Intermediate (Standard)
+      this.gridWidth = 28;
+      this.gridHeight = 20;
+      this.sappersMax = this.techsUnlocked.includes('resSapperAcademy') ? 5 : 3;
+    }
+    this.sappers = this.sappersMax;
+
     this.elapsedSeconds = 0;
     this.isGameOver = false;
     this.isVictory = false;
@@ -445,9 +466,6 @@ class KeepsweeperGame {
     this.hasBlastShield = (this.activeHeroPerk === 'iron_skin');
     this.activePower = null;
     this.digQueue = [];
-
-    this.sappersMax = this.techsUnlocked.includes('resSapperAcademy') ? 5 : 3;
-    this.sappers = this.sappersMax;
     this.resources = 240 + (this.techsUnlocked.includes('keep_upgrade') ? 60 : 0);
 
     this.projectiles = [];
@@ -489,6 +507,13 @@ class KeepsweeperGame {
         return;
       }
 
+      // 1x PPM Reliable Right-Click (Instant flag toggle on mousedown, prevents double-cancel)
+      if (e.button === 2) {
+        e.preventDefault();
+        this.handlePointerDown(e.clientX, e.clientY, 2);
+        return;
+      }
+
       this.handlePointerDown(e.clientX, e.clientY, e.button);
     });
 
@@ -522,20 +547,19 @@ class KeepsweeperGame {
       }
     });
 
-    // 1x PPM Reliable Right-Click (no accidental dragging)
+    // 1x PPM: Prevent contextmenu completely without calling handlePointerDown again!
     this.canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
-      this.handlePointerDown(e.clientX, e.clientY, 2);
     });
 
-    // Zoom on wheel
+    // Zoom on wheel (game canvas)
     this.canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
       const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
       this.setZoom(this.zoom * zoomFactor, e.clientX, e.clientY);
     }, { passive: false });
 
-    // Interactive Minimap Pan & Drag
+    // Interactive Minimap Pan & Drag & Zoom on Scroll Wheel
     if (this.minimapCanvas) {
       const panFromMinimap = (e) => {
         const rect = this.minimapCanvas.getBoundingClientRect();
@@ -549,6 +573,7 @@ class KeepsweeperGame {
 
         this.camX = (this.canvas.width / 2) - targetWorldX * this.zoom;
         this.camY = (this.canvas.height / 2) - targetWorldY * this.zoom;
+        this.renderMinimap();
       };
 
       let minimapMouseDown = false;
@@ -562,6 +587,14 @@ class KeepsweeperGame {
       window.addEventListener('mouseup', () => {
         minimapMouseDown = false;
       });
+
+      // User request: Minimap zoom in/out with mouse scroll wheel!
+      this.minimapCanvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+        this.setZoom(this.zoom * zoomFactor);
+        this.renderMinimap();
+      }, { passive: false });
     }
   }
 
@@ -602,6 +635,7 @@ class KeepsweeperGame {
         tile.flagged = !tile.flagged;
         this.movesCount++;
         if (tile.flagged) {
+          this.triggerDiscovery('first_flag', 'Oflagowanie Terenu', '🚩', 'Oflagowano pole podejrzane o minę! Za każdą poprawnie postawioną flagę otrzymujesz +0.1 punktu. Gdy liczba flag wokół odkrytego pola zgadza się z cyfrą, kliknięcie wykonuje Chord i odsłania resztę sąsiadów.');
           if (tile.danger) {
             // Correct flag placed on danger/mine: +0.1 point!
             this.score = Math.round((this.score + 0.1) * 10) / 10;
@@ -675,8 +709,8 @@ class KeepsweeperGame {
       tile.digOrdered = true;
       nearestSapper.state = 'walking_to_dig';
       nearestSapper.digTile = { tx, ty };
-      nearestSapper.targetX = targetPx + 8;
-      nearestSapper.targetY = targetPy + 8;
+      nearestSapper.targetX = targetPx + (this.tileSize - 24) / 2;
+      nearestSapper.targetY = targetPy + (this.tileSize - 24) / 2;
 
       // Update right panel active unit card
       this.updateActiveUnitCard(nearestSapper, `Biegnie do wykopu [${tx} x ${ty}]`);
@@ -701,7 +735,7 @@ class KeepsweeperGame {
 
     // Dig particles & SFX
     sfx.playDig();
-    this.createDirtSparks(tx * this.tileSize + 20, ty * this.tileSize + 20);
+    this.createDirtSparks(tx * this.tileSize + this.tileSize / 2, ty * this.tileSize + this.tileSize / 2);
 
     // Check Lucky Dud Hero Perk (3% chance mine is a dud)
     if (tile.danger && tile.dangerType === 'mine' && this.activeHeroPerk === 'lucky_dud' && Math.random() < 0.03) {
@@ -713,10 +747,12 @@ class KeepsweeperGame {
     if (tile.danger) {
       this.handleHazardDetonationUnderSapper(sapper, tx, ty);
     } else {
-      // Safe reveal
+      // Safe reveal: sapper remains on the tile guarding the sector!
       this.uncoverSafeTile(tx, ty);
+      sapper.x = tx * this.tileSize + (this.tileSize - 24) / 2;
+      sapper.y = ty * this.tileSize + (this.tileSize - 24) / 2;
       sapper.state = 'idle';
-      this.updateActiveUnitCard(sapper, 'Czuwa / Gotowy');
+      this.updateActiveUnitCard(sapper, `Czuwa na pozycji [${tx} x ${ty}]`);
       this.checkAndProcessDigQueue();
     }
   }
@@ -730,6 +766,9 @@ class KeepsweeperGame {
     // Increment blunder / skucha count!
     this.blundersCount++;
     this.updateUI();
+
+    // First blunder tutorial discovery
+    this.triggerDiscovery('first_blunder', 'Wybuch Miny i Skucha Sapera', '💥', 'Saper natrafił na minę! Jeśli nie miałeś aktywnego pancerza ochronnego (🛡️) lub talentu Niezłomnego Ducha, saper poległ na służbie. Nowych saperów możesz zawsze rekrutować za złoto (+⛑️) w prawym panelu lub na dolnym pasku!');
 
     // Screen Shake & SFX
     const win = document.getElementById('appWindow');
@@ -794,6 +833,9 @@ class KeepsweeperGame {
     tile.covered = false;
     this.uncoveredCount++;
 
+    // Tutorial: First safe tile discovery
+    this.triggerDiscovery('first_tile', 'Pionierski Wykop', '⛏️', 'Odkryto pierwsze bezpieczne pole! Cyfry wskazują liczbę min ukrytych na sąsiednich 8 polach. Jeśli cyfra wynosi 0, teren odsłania się kaskadowo.');
+
     // Hero progression: unlock a new hero ability / level every 10 uncovered tiles!
     const currentMilestone = Math.floor(this.uncoveredCount / 10);
     if (currentMilestone > this.lastHeroMilestone && this.uncoveredCount >= 10) {
@@ -810,6 +852,7 @@ class KeepsweeperGame {
       this.addFloatingText(`🌟 AWANS BOHATERA! Poz. ${this.heroLevel}`, tx * this.tileSize + 20, ty * this.tileSize - 20, '#e040fb');
       const perkMsg = newPerk ? ` Odblokowano talent: ${newPerk.name} ${newPerk.icon}!` : ` Wzmocniono siłę dowódcy!`;
       this.notify(`🌟 AWANS BOHATERA (Poziom ${this.heroLevel}) za ${this.uncoveredCount} odkrytych pól!${perkMsg}`, '⚡');
+      this.triggerDiscovery('first_hero', 'Awans Bohatera', '🌟', 'Twój Bohater zdobywa poziomy za każde 10 odkrytych pól lub trafne flagowanie! Możesz aktywować unikalne talenty w oknie Bohatera (⚡) na dolnym pasku.');
     }
 
     // Resources increase for revealed tiles!
@@ -826,6 +869,7 @@ class KeepsweeperGame {
       sfx.playChest();
       this.addFloatingText(`+${bonusGold} 💰 SKARB!`, tx * this.tileSize + 20, ty * this.tileSize - 10, '#ffea00');
       this.notify(`💎 Odnaleziono Skrzynię Złota (+${bonusGold} 💰)!`, '💎');
+      this.triggerDiscovery('first_chest', 'Ukryty Skarb Złota', '💎', 'Odnaleziono starożytną skrzynię złota! Skarby powiększają zasoby Twojej ekspedycji i pozwalają na rekrutację nowych saperów oraz zakup technologii.');
     } else if (tile.dangerType === 'wigwam') {
       // Civ 1 Native Tribal Village Contact
       sfx.playVictory();
@@ -833,6 +877,7 @@ class KeepsweeperGame {
       this.royalSeals += 2;
       localStorage.setItem('ks_seals', this.royalSeals);
       this.notify('🏕️ Wioska Indian! Starszyzna ofiarowała: +80 💰 i +2 👑 Pieczęcie!', '🏕️');
+      this.triggerDiscovery('first_wigwam', 'Wioska Tubylcza Indian', '🏕️', 'Twoi saperzy nawiązali kontakt z przyjazną osadą tubylczą. W zamian za pokój otrzymujesz złoto i Królewskie Pieczęcie 👑.');
     }
 
     // Cascade reveal if 0 adjacent dangers
@@ -879,6 +924,7 @@ class KeepsweeperGame {
                   this.unlockedHeroPerks.push(newPerk.id);
                   this.notify(`🌟 AWANS BOHATERA (Poz. ${this.heroLevel}): Odblokowano ${newPerk.name} ${newPerk.icon}!`, '⚡');
                 }
+                this.triggerDiscovery('first_hero', 'Awans Bohatera', '🌟', 'Twój Bohater zdobywa poziomy za każde 10 odkrytych pól lub trafne flagowanie! Możesz aktywować unikalne talenty w oknie Bohatera (⚡) na dolnym pasku.');
               }
 
               if (nTile.adjacentDangers === 0) queue.push([nx, ny]);
@@ -955,6 +1001,7 @@ class KeepsweeperGame {
     const dangerEl = document.getElementById('tileDangerLevel');
     const iconEl = document.getElementById('tileTerrainIcon');
     const bonusList = document.getElementById('tileBonusesList');
+    const descEl = document.getElementById('tileActionDesc');
 
     if (coordsTag) coordsTag.textContent = `${tx} x ${ty}`;
 
@@ -983,6 +1030,20 @@ class KeepsweeperGame {
       dangerText = tile.adjacentDangers > 0 ? `⚠️ Zagrożenie: ${tile.adjacentDangers} sąsiednie miny` : '✅ Teren oczyszczony';
     }
 
+    if (tile.dangerType === 'chest') {
+      terrainName = 'Starożytna Skrzynia Złota';
+      icon = '💎';
+      bonuses = ['💰 Skarb: 70-120 złota', '👑 Prestiż Królestwa'];
+    } else if (tile.dangerType === 'wigwam') {
+      terrainName = 'Wioska Indian (Tubylcy)';
+      icon = '🏕️';
+      bonuses = ['💰 Dar Złota: +80', '👑 Pieczęcie Królewskie: +2'];
+    } else if (tile.dangerType === 'dragon_nest') {
+      terrainName = 'Volcan Jaskinia Smoka';
+      icon = '🐉';
+      bonuses = ['💥 Śmiertelne Niebezpieczeństwo', '💣 Wymaga Katapulty lub Wyroczni'];
+    }
+
     if (tile.building) {
       terrainName = `Osada: ${tile.building.type.toUpperCase()}`;
       icon = '🏰';
@@ -996,6 +1057,102 @@ class KeepsweeperGame {
     if (bonusList) {
       bonusList.innerHTML = bonuses.map(b => `<div class="bonus-pill">${b}</div>`).join('');
     }
+
+    // Miniaturka w Inspektorze (dokładna grafika kafelka na mini-canvas)
+    const thumbCanvas = document.getElementById('tileThumbnailCanvas');
+    if (thumbCanvas) {
+      const tctx = thumbCanvas.getContext('2d');
+      tctx.clearRect(0, 0, 48, 48);
+      let previewSprite = null;
+
+      if (tile.covered) {
+        previewSprite = tile.oracleFlag ? Sprites.cache.golden_flag :
+                        (tile.flagged ? (this.engineMode === 'classic' ? Sprites.cache.classic_flag : Sprites.cache.flag) :
+                        (this.engineMode === 'classic' ? Sprites.cache.classic_covered : Sprites.cache.covered));
+      } else {
+        if (tile.crater) previewSprite = Sprites.cache.crater;
+        else if (tile.dangerType === 'chest') previewSprite = Sprites.cache.chest;
+        else if (tile.dangerType === 'wigwam') previewSprite = Sprites.cache.wigwam;
+        else if (tile.dangerType === 'dragon_nest') previewSprite = Sprites.cache.dragon_cave;
+        else if (tile.building) previewSprite = Sprites.cache[tile.building.type] || Sprites.cache.keep;
+        else if (tile.terrain === 'trees') previewSprite = Sprites.cache.trees;
+        else if (tile.terrain === 'lake') previewSprite = Sprites.cache.lake;
+        else if (tile.terrain === 'sea') previewSprite = Sprites.cache.sea;
+        else if (tile.terrain === 'water') previewSprite = Sprites.cache.water;
+        else previewSprite = (this.engineMode === 'classic' ? Sprites.cache.classic_revealed : Sprites.cache.grass);
+      }
+
+      if (previewSprite) {
+        tctx.drawImage(previewSprite, 0, 0, 48, 48);
+      }
+      if (!tile.covered && tile.adjacentDangers > 0 && !tile.danger && !tile.crater) {
+        tctx.font = '900 24px "Montserrat", sans-serif';
+        tctx.textAlign = 'center';
+        tctx.textBaseline = 'middle';
+        tctx.strokeStyle = '#000';
+        tctx.lineWidth = 3.5;
+        tctx.strokeText(tile.adjacentDangers.toString(), 24, 24);
+        tctx.fillStyle = '#00e676';
+        tctx.fillText(tile.adjacentDangers.toString(), 24, 24);
+      }
+    }
+
+    // Wyjaśnienie: co robi to pole?
+    let actionDesc = '<b>Działanie:</b> LPM = Rozkaz wykopu | 1x PPM = Postaw flagę.';
+    if (tile.covered) {
+      if (tile.flagged) {
+        actionDesc = '<b>Oflagowane pole:</b> Podejrzenie miny. Kliknij 1x PPM, aby zdjąć flagę.';
+      } else {
+        actionDesc = '<b>Niezbadany ląd:</b> Kliknij LPM, aby wysłać sapera. 1x PPM stawia flagę (+0.1 pkt jeśli trafna!).';
+      }
+    } else {
+      if (tile.dangerType === 'chest') {
+        actionDesc = '<b>Skarb Złota:</b> Odkopano bogatą skrzynię! Złoto zasiliło skarbiec królestwa.';
+      } else if (tile.dangerType === 'wigwam') {
+        actionDesc = '<b>Wioska Tubylcza:</b> Sojusz z Indianami. Ofiarowano złoto i Królewskie Pieczęcie 👑.';
+      } else if (tile.dangerType === 'dragon_nest') {
+        actionDesc = '<b>Jaskinia Smoka:</b> Śmiertelne niebezpieczeństwo! Użyj Katapulty lub Wyroczni z paska mocy.';
+      } else if (tile.crater) {
+        actionDesc = '<b>Krater Wybuchu:</b> Pozostałość po zdetonowanej minie.';
+      } else if (tile.terrain === 'water' || tile.terrain === 'sea') {
+        actionDesc = '<b>Szlak Morski:</b> Naturalne wody oceanu. Bezpieczna, otwarta przestrzeń.';
+      } else {
+        actionDesc = tile.adjacentDangers > 0
+          ? `<b>Bezpieczna Ziemia:</b> Sąsiaduje z ${tile.adjacentDangers} minami. Kliknij (Chord), aby odsłonić resztę!`
+          : '<b>Oczyszczony Teren:</b> Brak min w bezpośrednim sąsiedztwie.';
+      }
+    }
+
+    if (descEl) descEl.innerHTML = actionDesc;
+  }
+
+  // --- Interactive First-Time Discovery & Tutorial ---
+  triggerDiscovery(key, title, icon, message) {
+    if (this.seenDiscoveries[key]) return;
+    this.seenDiscoveries[key] = true;
+    localStorage.setItem('ks_discoveries', JSON.stringify(this.seenDiscoveries));
+
+    const modal = document.getElementById('modalDiscovery');
+    if (modal) {
+      const hTitle = document.getElementById('discoveryHeaderTitle');
+      const dIcon = document.getElementById('discoveryIcon');
+      const dTitle = document.getElementById('discoveryTitle');
+      const dText = document.getElementById('discoveryText');
+
+      if (hTitle) hTitle.textContent = `🧭 Nowe Odkrycie: ${title}`;
+      if (dIcon) dIcon.textContent = icon;
+      if (dTitle) dTitle.textContent = title;
+      if (dText) dText.textContent = message;
+
+      sfx.playVictory();
+      modal.style.display = 'flex';
+    }
+  }
+
+  resetTutorial() {
+    this.seenDiscoveries = {};
+    localStorage.removeItem('ks_discoveries');
+    this.notify('🔄 Zresetowano samouczek! Nowe odkrycia będą wyjaśniane od nowa.', '🧭');
   }
 
   updateActiveUnitCard(sapper, statusText) {
@@ -1243,34 +1400,39 @@ class KeepsweeperGame {
             this.ctx.drawImage(this.engineMode === 'classic' ? Sprites.cache.classic_covered : Sprites.cache.covered, px, py);
           }
 
-          // Show targeted dig marker
+          // Show targeted dig marker (Centered pickaxe with animated frame)
           if (tile.digOrdered) {
-            this.ctx.fillStyle = 'rgba(255, 235, 59, 0.4)';
+            this.ctx.fillStyle = 'rgba(255, 235, 59, 0.35)';
             this.ctx.fillRect(px, py, this.tileSize, this.tileSize);
-            this.ctx.font = '14px sans-serif';
-            this.ctx.fillText('⛏️', px + 12, py + 24);
+            this.ctx.strokeStyle = '#ffd600';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(px + 2, py + 2, this.tileSize - 4, this.tileSize - 4);
+            this.ctx.font = '22px sans-serif';
+            this.ctx.textAlign = 'center';
+            this.ctx.textBaseline = 'middle';
+            this.ctx.fillText('⛏️', px + this.tileSize / 2, py + this.tileSize / 2);
           }
         } else {
           // Uncovered Tile
           if (tile.crater) {
-            this.ctx.drawImage(Sprites.cache.crater, px, py);
+            this.ctx.drawImage(Sprites.cache.crater, px, py, this.tileSize, this.tileSize);
           } else if (tile.terrain === 'water' || tile.terrain === 'sea') {
-            this.ctx.drawImage(tile.terrain === 'sea' ? Sprites.cache.sea : Sprites.cache.water, px, py);
+            this.ctx.drawImage(tile.terrain === 'sea' ? Sprites.cache.sea : Sprites.cache.water, px, py, this.tileSize, this.tileSize);
           } else if (tile.terrain === 'lake') {
-            this.ctx.drawImage(Sprites.cache.lake, px, py);
+            this.ctx.drawImage(Sprites.cache.lake, px, py, this.tileSize, this.tileSize);
           } else if (tile.terrain === 'trees') {
-            this.ctx.drawImage(Sprites.cache.trees, px, py);
+            this.ctx.drawImage(Sprites.cache.trees, px, py, this.tileSize, this.tileSize);
           } else {
-            this.ctx.drawImage(this.engineMode === 'classic' ? Sprites.cache.classic_revealed : Sprites.cache.grass, px, py);
+            this.ctx.drawImage(this.engineMode === 'classic' ? Sprites.cache.classic_revealed : Sprites.cache.grass, px, py, this.tileSize, this.tileSize);
           }
 
           // Special Features
           if (tile.dangerType === 'dragon_nest') {
-            this.ctx.drawImage(Sprites.cache.dragon_cave, px, py);
+            this.ctx.drawImage(Sprites.cache.dragon_cave, px, py, this.tileSize, this.tileSize);
           } else if (tile.dangerType === 'chest') {
-            this.ctx.drawImage(Sprites.cache.chest, px, py);
+            this.ctx.drawImage(Sprites.cache.chest, px, py, this.tileSize, this.tileSize);
           } else if (tile.dangerType === 'wigwam') {
-            this.ctx.drawImage(Sprites.cache.wigwam, px, py);
+            this.ctx.drawImage(Sprites.cache.wigwam, px, py, this.tileSize, this.tileSize);
           }
 
           // Buildings & Settlements
@@ -1280,13 +1442,13 @@ class KeepsweeperGame {
               const tierSprite = this.uncoveredCount >= 65 ? Sprites.cache.settlement_citadel :
                                 (this.uncoveredCount >= 35 ? Sprites.cache.settlement_township :
                                 (this.uncoveredCount >= 15 ? Sprites.cache.settlement_hamlet : Sprites.cache.settlement_camp));
-              this.ctx.drawImage(tierSprite, px, py);
+              this.ctx.drawImage(tierSprite, px, py, this.tileSize, this.tileSize);
             } else {
               const bSprite = Sprites.cache[tile.building.type];
-              if (bSprite) this.ctx.drawImage(bSprite, px, py);
+              if (bSprite) this.ctx.drawImage(bSprite, px, py, this.tileSize, this.tileSize);
             }
           } else if (tile.adjacentDangers > 0 && !tile.danger && !tile.crater) {
-            // Render Minesweeper Number with Exact Original Colors
+            // Render High-Contrast Minesweeper Number with Exact Stroke
             this.renderMinesweeperNumber(tile.adjacentDangers, px, py);
           }
         }
@@ -1315,7 +1477,7 @@ class KeepsweeperGame {
 
     // Floating text indicators
     this.floatingTexts.forEach(ft => {
-      this.ctx.font = 'bold 12px "Montserrat", sans-serif';
+      this.ctx.font = 'bold 13px "Montserrat", sans-serif';
       this.ctx.fillStyle = ft.color;
       this.ctx.shadowColor = '#000';
       this.ctx.shadowBlur = 4;
@@ -1326,25 +1488,35 @@ class KeepsweeperGame {
     this.ctx.restore();
   }
 
-  // Exact Original Windows 95 Saper Colors
+  // High-Contrast Bold Minesweeper Numbers with Dark Outline (Neon Green 2)
   renderMinesweeperNumber(num, px, py) {
-    const classicColors = [
+    const brightColors = [
       '',
-      '#0000ff', // 1: Pure Blue
-      '#008000', // 2: Dark Green
-      '#ff0000', // 3: Pure Red
-      '#000080', // 4: Navy Blue
-      '#800000', // 5: Maroon Red
-      '#008080', // 6: Teal Cyan
-      '#000000', // 7: Pure Black
-      '#808080'  // 8: Solid Gray
+      '#2979ff', // 1: Vibrant Royal Blue
+      '#00e676', // 2: Bright Neon Emerald (100% visible on dark sea, water, grass!)
+      '#ff1744', // 3: Vivid Crimson Red
+      '#7c4dff', // 4: Royal Violet
+      '#ff9100', // 5: Warm Amber Orange
+      '#00e5ff', // 6: Electric Cyan
+      '#f50057', // 7: Bright Magenta
+      '#ffffff'  // 8: Pure Platinum White
     ];
 
-    this.ctx.font = 'bold 22px "Courier New", monospace';
-    this.ctx.fillStyle = classicColors[num] || '#000';
+    const cx = px + this.tileSize / 2;
+    const cy = py + this.tileSize / 2;
+
+    this.ctx.font = '900 26px "Montserrat", "Segoe UI Black", sans-serif';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
-    this.ctx.fillText(num.toString(), px + this.tileSize / 2, py + this.tileSize / 2 + 1);
+
+    // Solid dark outline stroke for razor-sharp visibility on any terrain
+    this.ctx.strokeStyle = '#000000';
+    this.ctx.lineWidth = 3.8;
+    this.ctx.lineJoin = 'round';
+    this.ctx.strokeText(num.toString(), cx, cy);
+
+    this.ctx.fillStyle = brightColors[num] || '#ffffff';
+    this.ctx.fillText(num.toString(), cx, cy);
   }
 
   // --- Minimap Radar Rendering ---
@@ -1674,6 +1846,22 @@ class KeepsweeperGame {
         this.updateUI();
       });
     }
+
+    // Quick Difficulty Selector (Beginner / Intermediate / Expert)
+    const quickDiff = document.getElementById('quickDifficultySelect');
+    if (quickDiff) {
+      quickDiff.value = this.difficulty || 'intermediate';
+      quickDiff.addEventListener('change', (e) => {
+        this.difficulty = e.target.value;
+        localStorage.setItem('ks_difficulty', this.difficulty);
+        this.startLevel(this.mode, 1);
+        this.notify(`Zmieniono poziom trudności na: ${e.target.options[e.target.selectedIndex].text}`, '🎯');
+      });
+    }
+
+    // Tutorial Reset Buttons
+    bindClick('btnResetTutorial', () => this.resetTutorial());
+    bindClick('btnHelpResetTutorial', () => this.resetTutorial());
 
     // Sound Toggle Button in Header
     bindClick('btnSoundHeader', () => {
@@ -2024,14 +2212,22 @@ class KeepsweeperGame {
     const theme = localStorage.getItem('ks_theme') || 'colonization';
     const font = localStorage.getItem('ks_font') || 'montserrat';
     const cursor = localStorage.getItem('ks_cursor') || 'sword';
+    const diff = localStorage.getItem('ks_difficulty') || 'intermediate';
+    this.difficulty = diff;
 
     document.body.className = `theme-${theme} font-${font} cursor-${cursor}`;
+
+    const themeSel = document.getElementById('settingThemeSelect');
+    if (themeSel) themeSel.value = theme;
 
     const fontSel = document.getElementById('settingFontSelect');
     if (fontSel) fontSel.value = font.charAt(0).toUpperCase() + font.slice(1);
 
     const cursorSel = document.getElementById('settingCursorSelect');
     if (cursorSel) cursorSel.value = cursor;
+
+    const diffSel = document.getElementById('quickDifficultySelect');
+    if (diffSel) diffSel.value = diff;
   }
 
   notify(msg, icon = '📢') {

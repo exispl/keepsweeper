@@ -58,8 +58,17 @@
       </div>
       <div class="menu-item" id="menuSettings" data-i18n="menuSettings">Ustawienia</div>
       <div class="menu-item" id="menuHelp" data-i18n="menuHelp">Pomoc</div>
+      <!-- Quick Difficulty Switcher (Łatwy, Średni, Trudny) -->
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 4px; padding-right: 6px;">
+        <span style="font-size: 11px; font-weight: bold; color: inherit;">TRUDNOŚĆ:</span>
+        <select id="quickDifficultySelect" style="font-size: 11px; font-weight: bold; padding: 2px 5px; border-radius: 3px;">
+          <option value="beginner">🟢 Łatwy (Pionier - 10% min, 5 saperów)</option>
+          <option value="intermediate" selected>🟡 Średni (Odkrywca - 15% min, 3 saperów)</option>
+          <option value="expert">🔴 Trudny (Ekspert - 21% min, 2 saperów)</option>
+        </select>
+      </div>
       <!-- Quick Language Switcher -->
-      <div style="margin-left: auto; display: flex; align-items: center; gap: 4px; padding-right: 4px;">
+      <div style="display: flex; align-items: center; gap: 4px; padding-right: 4px;">
         <span style="font-size: 10px; font-weight: bold; color: inherit;">LANG:</span>
         <select id="quickLangSelect" style="font-size: 11px; padding: 1px 3px;">
           <option value="pl">Polski (PL)</option>
@@ -219,19 +228,24 @@
           </div>
         </div>
 
-        <!-- Bottom-Right: Hover Tile Inspector (CO TO ZA POLE, KOORDYNATY I BONUSY) -->
+        <!-- Bottom-Right: Hover Tile Inspector (CO TO ZA POLE, KOORDYNATY, MINIATURKA I CO ROBI) -->
         <div class="panel-box tile-inspector-box" id="tileInspector">
           <div class="panel-box-header">
-            <span id="inspectorTitle">📍 Prowincja: Nowa Francja</span>
+            <span id="inspectorTitle">📍 Inspektor Pola</span>
             <span class="coord-tag" id="tileCoordsTag">12 x 8</span>
           </div>
           <div class="tile-inspector-body">
             <div class="tile-terrain-row">
-              <span class="terrain-icon" id="tileTerrainIcon">🌲</span>
+              <div class="tile-thumbnail-box" id="tileThumbnailWrap" title="Miniaturka badanego pola">
+                <canvas id="tileThumbnailCanvas" width="48" height="48"></canvas>
+              </div>
               <div class="terrain-meta">
                 <b id="tileTerrainName">Gęsty Las Sosnowy</b>
-                <span id="tileDangerLevel" style="font-size: 10px; color: #b71c1c;">⚠️ Ryzyko min: 1-2 w pobliżu</span>
+                <span id="tileDangerLevel" style="font-size: 11px; color: #b71c1c; font-weight: bold;">⚠️ Ryzyko min: 1-2 w pobliżu</span>
               </div>
+            </div>
+            <div class="tile-action-desc" id="tileActionDesc">
+              <b>Działanie:</b> LPM wysyła najbliższego sapera do wykopu. 1x PPM stawia flagę.
             </div>
             <div class="tile-bonuses-list" id="tileBonusesList">
               <div class="bonus-pill">💰 Złoto: <b>+2</b></div>
@@ -648,6 +662,9 @@
             <span>Motyw wizualny okna:</span>
             <select id="settingThemeSelect">
               <option value="colonization">Kolonizacja (Ciepłe Drewno & Skóra)</option>
+              <option value="light">Jasny Pergamin (Czysty & Wysoki Kontrast)</option>
+              <option value="meadow">Jasna Soczysta Zieleń (Świeża Łąka & Las)</option>
+              <option value="azure">Jasny Błękit Morski (Lazur Laguny & Niebo)</option>
               <option value="win95">Klasyczny Windows 95 (Szary Teal)</option>
             </select>
           </div>
@@ -700,22 +717,28 @@
             <input type="checkbox" id="settingSoundToggle" checked>
           </div>
 
+          <!-- Reset Samouczka -->
+          <div class="setting-row" style="flex-direction: column; align-items: stretch; gap: 4px; padding-top: 6px;">
+            <button class="action-btn" id="btnResetTutorial" style="background: #e65100; color: #fff; font-weight: bold; padding: 6px 10px;">
+              🔄 Zresetuj Samouczek i Odkrycia (Wyjaśnienia od zera)
+            </button>
+          </div>
+
           <!-- Wersja gry -->
           <div class="setting-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #bbb;">
             <span data-i18n="settingVersion">Wersja gry:</span>
-            <span id="settingsVersionText" style="font-family: monospace; font-weight: bold; color: #1565c0;">v1.4.0</span>
+            <span id="settingsVersionText" style="font-family: monospace; font-weight: bold; color: #1565c0;">v1.4.1</span>
           </div>
 
           <!-- Wykaz nowości -->
           <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 4px; padding-top: 4px; border-bottom: none;">
-            <span style="font-size: 10px; color: #555;">Zainstalowane nowości:</span>
-            <div id="settingsFeaturesList" style="font-size: 10px; color: #333; background: #fff; border: 1px inset #808080; padding: 4px 6px; width: 100%; max-height: 80px; overflow-y: auto;">
-              • Podwójny silnik: Kolonizacja (Civ) & Klasyczny Saper Win95<br>
-              • Oryginalne kolory Sapera 1-8 i Dźwięk ON/OFF w belce tytułowej<br>
-              • Fizyczny wykop przez saperów i zgon na minie<br>
-              • Wykres pasma ostatnich meczy & śledzenie skuch pod zawodnikami<br>
-              • Inspektor pól i bonusów w prawym dolnym rogu (Koordynaty X x Y)<br>
-              • Czcionki Google (Montserrat, Lato, Cinzel) oraz retro kursory
+            <span style="font-size: 11px; color: #555; font-weight: bold;">Zainstalowane nowości:</span>
+            <div id="settingsFeaturesList" style="font-size: 11px; color: #333; background: #fff; border: 1px inset #808080; padding: 4px 6px; width: 100%; max-height: 80px; overflow-y: auto;">
+              • Powiększone pola 48x48 i ultra-wyraźne cyfry z czarnym obrysem (neonowa zielona 2)<br>
+              • 3 poziomy trudności (Łatwy 10% min, Średni 15% min, Trudny 21% min)<br>
+              • Nowe motywy: Jasny Pergamin, Jasna Zieleń, Jasny Błękit Morski<br>
+              • Natychmiastowe 1x PPM dla flag, kilof na środku i saperzy czuwający na polach<br>
+              • Zoom kółkiem myszy na minimapie i interaktywny samouczek krok po kroku
             </div>
           </div>
         </div>
@@ -726,18 +749,59 @@
     </div>
   </div>
 
-  <!-- Modal: Help -->
+  <!-- Modal: Interactive Help & Step-by-Step Pioneer Guide -->
   <div class="modal-overlay" id="modalHelp">
-    <div class="modal-window" style="width: 520px;">
+    <div class="modal-window" style="width: 580px;">
       <div class="modal-header">
-        <span data-i18n="helpTitle">Pomoc i Instrukcja</span>
+        <span data-i18n="helpTitle">🧭 Pomoc & Przewodnik Pioniera: Od Czego Zacząć</span>
         <button class="win-btn modal-close">✕</button>
       </div>
-      <div class="modal-body" data-i18n-html="helpText">
-        <!-- Loaded from i18n -->
+      <div class="modal-body" style="font-size: 13px; line-height: 1.5; color: #333; max-height: 480px; overflow-y: auto;">
+        <div style="background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 6px; padding: 10px; margin-bottom: 12px;">
+          <h3 style="color: #1b5e20; font-size: 15px; margin-bottom: 6px;">📋 Krok po kroku: Od czego najpierw zacząć?</h3>
+          <p style="margin-bottom: 6px;"><b>1. 🏖️ Wylądowanie na brzegu:</b> Twoja ekspedycja wylądowała przy wybrzeżu. Zacznij od kliknięcia <b>LPM</b> na dowolną pobliską zakrytą trawę. Najbliższy saper pobiegnie na miejsce i fizycznie odkopie pole!</p>
+          <p style="margin-bottom: 6px;"><b>2. 🔢 Czytaj cyfry (1-8):</b> Odkryte cyfry informują dokładnie, ile min kryje się w 8 sąsiednich kratkach. Neonowo zielona dwójka oznacza dokładnie 2 miny wokół!</p>
+          <p style="margin-bottom: 6px;"><b>3. 🚩 Stawiaj flagi (1x PPM):</b> Jeśli wydedukujesz położenie miny, kliknij prawym przyciskiem myszy (<b>PPM</b>). Za każdą poprawnie postawioną flagę na minie zyskujesz <b>+0.1 pkt prestiżu</b>!</p>
+          <p style="margin-bottom: 6px;"><b>4. ⛑️ Chroń saperów:</b> Trafienie na minę zabija sapera, chyba że masz aktywny <b>Pancerz 🛡️</b> lub talent <b>Niewybuchu 🍀</b>. Nowych saperów możesz rekrutować za złoto (+⛑️) w prawym panelu.</p>
+          <p style="margin-bottom: 6px;"><b>5. 💎 Skarby, Tubylcy i Awans:</b> Odkrywaj złote skrzynie (złoto powiększa zasoby!), wioski Indian (ofiarują sojusz i Królewskie Pieczęcie 👑), a co każde <b>10 odkrytych pól</b> Twój Bohater awansuje i odblokowuje nowy talent!</p>
+        </div>
+
+        <div style="background: #e1f5fe; border: 1px solid #b3e5fc; border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+          <h4 style="color: #0277bd; font-size: 14px; margin-bottom: 4px;">🎮 Nawigacja i sterowanie:</h4>
+          <ul style="margin-left: 20px; font-size: 12px;">
+            <li><b>Środkowy Przycisk Myszy (MMB)</b> lub <b>Shift + LPM</b>: Swobodne przesuwanie mapy (Pan).</li>
+            <li><b>Rolka myszy (Scroll)</b>: Płynny Zoom na planszy oraz bezpośrednio na mini-mapie!</li>
+            <li><b>Kliknięcie na mini-mapie</b>: Natychmiastowy skok kamery w wybrany rejon kontynentu.</li>
+            <li><b>Przycisk □ w nagłówku</b>: Tryb pełnoekranowy 1920x1080.</li>
+          </ul>
+        </div>
+
+        <button class="action-btn" id="btnHelpResetTutorial" style="background: #e65100; color: #fff; width: 100%; font-weight: bold; margin-top: 4px;">
+          🔄 Zresetuj Samouczek (Pokaż wyjaśnienia pierwszego odkrycia od nowa)
+        </button>
       </div>
       <div class="modal-footer">
         <button class="action-btn modal-close" data-i18n="btnClose">Zamknij</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: First-Time Discovery Notification Popup -->
+  <div class="modal-overlay" id="modalDiscovery" style="z-index: 9999;">
+    <div class="modal-window" style="width: 480px; border: 3px solid #f57f17; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
+      <div class="modal-header" style="background: linear-gradient(90deg, #f57f17, #fbc02d); color: #000; font-weight: bold;">
+        <span id="discoveryHeaderTitle">🧭 Nowe Odkrycie w Nowym Świecie!</span>
+        <button class="win-btn modal-close">✕</button>
+      </div>
+      <div class="modal-body" style="text-align: center; padding: 20px; background: #fffde7;">
+        <div id="discoveryIcon" style="font-size: 52px; margin-bottom: 8px;">💎</div>
+        <h3 id="discoveryTitle" style="font-size: 18px; margin-bottom: 8px; color: #3e2723;">Starożytny Skarb Złota!</h3>
+        <p id="discoveryText" style="font-size: 13px; color: #424242; line-height: 1.5; margin-bottom: 16px;">
+          Odkopałeś skarb Nowego Świata! Skrzynie dostarczają dużo złota do Twojego skarbca, pozwalając na rekrutację nowych saperów, rozbudowę fortu oraz handel zamorski.
+        </p>
+        <button class="action-btn modal-close" style="background: #2e7d32; color: #fff; font-size: 14px; font-weight: bold; padding: 8px 24px;">
+          Wspaniale, gram dalej! 🚀
+        </button>
       </div>
     </div>
   </div>

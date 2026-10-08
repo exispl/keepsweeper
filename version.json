@@ -1,13 +1,16 @@
 {
-  "version": "1.4.1",
-  "build": "20261008.1645",
-  "releaseDate": "2026-10-08 16:45",
+  "version": "1.4.2",
+  "build": "20261008.1730",
+  "releaseDate": "2026-10-08 17:30",
   "features": [
-    "Optymalizacja Full HD 1920x1080 z prawdziwym trybem pełnoekranowym (przycisk □ w belce)",
-    "Usunięcie błędu przedwczesnego zwycięstwa po 1 kratce (zabezpieczenie kaskady oceanicznej i próg 25 pól)",
-    "Wykres pasma meczy i tabela z dokładnym licznikiem ruchów do wygranej/przegranej (np. 🏆 14r. / 💥 8r.)",
-    "System awansu i odblokowywania nowych talentów SuperBohatera co każde 10 odkrytych pól",
-    "Punkty celności za flagi: +0.1 pkt prestiżu za każdą poprawnie oznaczoną minę/niebezpieczeństwo",
-    "Ultra-precyzyjne kursory (Złoty Sztylet, Kilof, Precyzyjna Strzałka, Win95) wskazujące wierzchołkiem na (0,0)"
+    "Natychmiastowe 1x PPM flagowanie bez konieczności przeciągania myszką (rozwiązanie konfliktu mousedown i contextmenu)",
+    "Super-czytelne neonowe cyfry saperowe (neonowy szmaragd #00e676 dla 2, wyrazisty czarny kontur) widoczne na każdym podłożu",
+    "Wyśrodkowany marker kilofa ⛏️ oraz pozostawanie saperów na odkrytych kafelkach po zakończeniu prac",
+    "3 nowe jasne motywy graficzne: Jasny Pergamin, Soczysta Łąka oraz Lazurowy Błękit",
+    "Powiększone czcionki i kafelki (48px) zapewniające krystaliczną czytelność i więcej miejsca na grafiki",
+    "Interaktywny Przewodnik Pioniera, samouczek krok po kroku oraz wyskakujące wyjaśnienia pierwszych odkryć z opcją resetu",
+    "Inspektor kafelka w prawym dolnym rogu z dynamiczną miniaturką 48x48, koordynatami i opisem akcji/bonusów",
+    "3 poziomy trudności (Początkujący 10% min, Standardowy 15% min, Ekspert 21% min) wybierane w belce menu",
+    "Płynny zoom kółkiem myszy (scroll wheel) bezpośrednio nad minimapą z synchronizacją podglądu kamery"
   ]
 }

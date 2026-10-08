@@ -2,7 +2,7 @@
 // 40px High-Detail Retro Sprites (Civilization 1 & Classic Fantasy Aesthetic)
 
 const Sprites = {
-  tileSize: 40, // Expanded larger tile grid size in px
+  tileSize: 48, // Expanded larger tile grid size in px (48x48)
 
   makeCanvas(w, h) {
     const c = document.createElement('canvas');
