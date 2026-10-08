@@ -1,13 +1,19 @@
-// Keepsweeper - Main Game Engine
-// Integrates Minesweeper, Sapper Corps, Kingdom Building, Dragon Battles & Civilization 1 Mechanics
+// Keepsweeper - Dual Engine Game System
+// Engine 1: Sid Meier's Colonization & Civilization Continental Realm
+// Engine 2: Pure Classic Windows 95 Minesweeper (Saper)
 
 class KeepsweeperGame {
   constructor() {
     this.canvas = document.getElementById('gameCanvas');
     this.ctx = this.canvas.getContext('2d');
     this.viewport = document.getElementById('viewport');
+    this.minimapCanvas = document.getElementById('minimapCanvas');
+    this.minimapCtx = this.minimapCanvas ? this.minimapCanvas.getContext('2d') : null;
 
-    // Display scale & camera pan
+    // Active Engine: 'colonization' (Continental Civ/RPG) or 'classic' (Win95 Saper)
+    this.engineMode = localStorage.getItem('ks_engine') || 'colonization';
+
+    // Camera & Pan
     this.zoom = 1.0;
     this.camX = 0;
     this.camY = 0;
@@ -15,55 +21,83 @@ class KeepsweeperGame {
     this.panStartX = 0;
     this.panStartY = 0;
     this.flagMode = false;
+    this.showGrid = true;
 
-    // Progression & Meta Storage
+    // Progression & Meta
     this.royalSeals = parseInt(localStorage.getItem('ks_seals') || '25', 10);
     this.techsUnlocked = JSON.parse(localStorage.getItem('ks_techs') || '["scout"]');
     this.progress = JSON.parse(localStorage.getItem('ks_prog') || JSON.stringify({
-      dragon: 1,
-      reclaim: 1,
-      treasury: 1,
-      siege: 1
+      dragon: 1, reclaim: 1, treasury: 1, siege: 1
     }));
+    this.matchHistory = JSON.parse(localStorage.getItem('ks_match_history') || '[]');
+    this.activeCommander = localStorage.getItem('ks_commander') || 'Arthur';
 
-    // Game Session State
+    // Session State
     this.mode = 'dragon';
     this.level = 1;
-    this.gridWidth = 22;
+    this.gridWidth = 28;
     this.gridHeight = 22;
-    this.tileSize = 40; // High-detail 40px grid size
+    this.tileSize = 40;
 
-    this.resources = 220;
+    // Economy & Tracking
+    this.year = 1521;
+    this.resources = 240;
     this.workersTotal = 3;
     this.workersIdle = 3;
     this.soldiersTotal = 0;
     this.soldiersMax = 5;
 
-    // Sapper Corps & Casualties ("skuchy")
+    // Sapper Corps & Casualties ("Skuchy")
     this.sappersMax = 3;
     this.sappers = 3;
+    this.blundersCount = 0; // Skuchy
     this.hasBlastShield = false;
 
-    // Royal Powers / Blind Guessing System
+    // Timer & Objectives
+    this.elapsedSeconds = 0;
+    this.isGameOver = false;
+    this.isVictory = false;
+    this.dragonsTarget = 1;
+    this.dragonsSlain = 0;
+    this.uncoveredTarget = 120;
+    this.chestsTarget = 3;
+    this.chestsCollected = 0;
+    this.uncoveredCount = 0;
+
+    // Superhero Commander Perks (12 Perks)
+    this.heroPerks = [
+      { id: 'sixth_sense', name: 'Siódmy Zmysł', desc: '1% szansy co sekundę na samoodsłonięcie losowego bezpiecznego pola.', icon: '🔮' },
+      { id: 'lucky_dud', name: 'Szczęście Sapera', desc: '3% szansy, że trafiona mina okaże się niewybuchem i nie eksploduje!', icon: '🍀' },
+      { id: 'midas_touch', name: 'Dotyk Midasa', desc: '+50% więcej zasobów za każde odkryte pole i znalezione złoto.', icon: '👑' },
+      { id: 'hermes_boots', name: 'Skrzydlate Buty', desc: 'Saperzy poruszają się o +80% szybciej po mapie.', icon: '🥾' },
+      { id: 'prospector', name: 'Królewski Złotnik', desc: 'Podwaja liczbę skrzyń i skarbów generowanych na mapie.', icon: '💎' },
+      { id: 'iron_skin', name: 'Żelazna Skóra', desc: 'Każda misja startuje z darmowym ładunkiem Pancerza Ochronnego.', icon: '🛡️' },
+      { id: 'eagle_eye', name: 'Sokole Oko', desc: 'Zasięg widzenia i radaru +1 pole wokół każdej odkrytej cyfry.', icon: '🦅' },
+      { id: 'master_flagger', name: 'Mistrz Flag', desc: '1x PPM natychmiast stawia flagę; flagi rozbrajają pułapki.', icon: '🚩' },
+      { id: 'monk_blessing', name: 'Błogosławieństwo Mnicha', desc: 'Saperzy odradzają się za darmo co 60 sekund.', icon: '⛪' },
+      { id: 'warlord_aura', name: 'Aura Wojownika', desc: 'Wojsko zadaje podwójne obrażenia smokom i potworom.', icon: '⚔️' },
+      { id: 'earth_alchemy', name: 'Alchemia Ziemi', desc: 'Zamiast krateru po wybuchu powstaje żyła czystego złota (+80💰).', icon: '⚗️' },
+      { id: 'unyielding', name: 'Niezłomny Duch', desc: 'Pierwsza skucha w meczu nie powoduje straty sapera ani życia zamku.', icon: '🌟' }
+    ];
+    this.activeHeroPerk = localStorage.getItem('ks_hero_perk') || 'sixth_sense';
+
+    // AI Rivals Simulation (Colonization Opposing Factions)
+    this.aiRivals = {
+      spain: { name: 'Konkwistadorzy (Hiszpania)', color: '#d32f2f', x: 2, y: 2, tiles: 0, gold: 80, blunders: 0, sappers: 2 },
+      france: { name: 'Nowa Francja (Francuzi)', color: '#1976d2', x: 25, y: 2, tiles: 0, gold: 70, blunders: 0, sappers: 2 }
+    };
+    this.aiTurnCounter = 0;
+
+    // Royal Powers
     this.activePower = null;
     this.powerCooldowns = { oracle: 0, falcon: 0, shield: 0, bombard: 0, probe: 0 };
     this.powerBaseCooldowns = { oracle: 25, falcon: 30, shield: 35, bombard: 20, probe: 15 };
 
-    this.elapsedSeconds = 0;
-    this.isGameOver = false;
-    this.isVictory = false;
-
-    // Quest objectives
-    this.dragonsTarget = 1;
-    this.dragonsSlain = 0;
-    this.uncoveredTarget = 100;
-    this.chestsTarget = 3;
-    this.chestsCollected = 0;
-
-    // Board matrix & Entities
+    // Board & Entities
     this.grid = [];
     this.projectiles = [];
     this.particles = [];
+    this.floatingTexts = [];
     this.dragons = [];
     this.goblins = [];
     this.workers = [];
@@ -75,19 +109,16 @@ class KeepsweeperGame {
     this.falcons = [];
     this.catapultStones = [];
 
-    // Building system
-    this.selectedBuildingType = null;
+    // Digging Orders Queue
+    this.digQueue = [];
+
+    // Hover Tile Info
     this.hoverTile = null;
 
+    // Building definitions
+    this.selectedBuildingType = null;
     this.buildingCosts = {
-      house: 40,
-      barracks: 80,
-      watchtower: 60,
-      market: 100,
-      farm: 50,
-      wall: 15,
-      wonder: 150, // Civ 1 Wonder
-      settler: 70   // Civ 1 Settler Caravan
+      house: 40, barracks: 80, watchtower: 60, market: 100, farm: 50, wall: 15, wonder: 150, settler: 70
     };
 
     // Tech definitions
@@ -110,132 +141,75 @@ class KeepsweeperGame {
   init() {
     Sprites.init();
     this.resizeCanvas();
-    window.addEventListener('resize', () => this.resizeCanvas());
+    window.addEventListener('resize', () => {
+      this.resizeCanvas();
+      this.centerCamera();
+    });
 
     this.bindEvents();
     this.setupUI();
     this.fetchVersionInfo();
     this.startLevel(this.mode, this.level);
 
-    // Poll version.json periodically and on focus
-    setInterval(() => this.fetchVersionInfo(), 10000);
-    window.addEventListener('focus', () => this.fetchVersionInfo());
+    // Apply visual settings from storage
+    this.applySavedSettings();
 
-    // Main animation loop
+    // Loop
     this.lastFrameTime = performance.now();
     requestAnimationFrame((t) => this.gameLoop(t));
 
-    // Secondary 1-second simulation tick for resources, wonders, sapper recovery and cooldowns
+    // Simulation tick every second
     setInterval(() => this.simulationTick(), 1000);
   }
 
-  async fetchVersionInfo() {
-    try {
-      const res = await fetch(`version.json?_t=${Date.now()}`);
-      if (res.ok) {
-        const data = await res.json();
-        this.applyVersionInfo(data);
-      }
-    } catch (e) {
-      this.applyVersionInfo({
-        version: "1.3.0",
-        build: "20261008.1555",
-        features: [
-          "Większe pola 40px i ulepszone grafiki postaci (24px)",
-          "Żywe królestwo: autonomiczny ruch mieszkańców i saperów po odkrytych polach",
-          "Elementy Civilization 1: Wioski Indian (Wigwamy) z losowymi darami starszyzny",
-          "Cuda Świata (Monolity odkrywające bezpieczne pola) oraz Osadnicy kładący drogi",
-          "Poprawiony PPM: niezawodne zdejmowanie i stawianie flag",
-          "Kompletna dokumentacja projektu i integracja z GitHub"
-        ]
-      });
-    }
-  }
-
-  applyVersionInfo(data) {
-    if (!data) return;
-    const badge = document.getElementById('appVersionBadge');
-    const settingsText = document.getElementById('settingsVersionText');
-    const featuresList = document.getElementById('settingsFeaturesList');
-
-    if (badge) {
-      badge.textContent = `v${data.version}`;
-    }
-    if (settingsText) {
-      settingsText.textContent = `v${data.version} (Build ${data.build})`;
-    }
-    if (featuresList && data.features) {
-      featuresList.innerHTML = data.features.map(f => `• ${f}`).join('<br>');
-    }
-
-    if (this.currentBuild && this.currentBuild !== data.build) {
-      if (badge) badge.classList.add('updated');
-      this.notify(`📢 Gra została zaktualizowana do wersji v${data.version}!`, '✨');
-    }
-    this.currentBuild = data.build;
-  }
-
   resizeCanvas() {
-    this.canvas.width = this.viewport.clientWidth;
-    this.canvas.height = this.viewport.clientHeight;
+    if (!this.viewport) return;
+    const w = this.viewport.clientWidth || 800;
+    const h = this.viewport.clientHeight || 600;
+    if (this.canvas.width !== w || this.canvas.height !== h) {
+      this.canvas.width = w;
+      this.canvas.height = h;
+    }
   }
 
-  startLevel(mode, level) {
-    this.mode = mode;
-    this.level = level;
-    this.elapsedSeconds = 0;
-    this.isGameOver = false;
-    this.isVictory = false;
-    this.hasBlastShield = false;
-    this.activePower = null;
-
-    Object.keys(this.powerCooldowns).forEach(k => this.powerCooldowns[k] = 0);
-
-    this.sappersMax = this.techsUnlocked.includes('resSapperAcademy') ? 5 : 3;
-    this.sappers = this.sappersMax;
-
-    this.resources = 220 + (this.techsUnlocked.includes('keep_upgrade') ? 60 : 0);
-    this.workersTotal = 3 + (this.techsUnlocked.includes('keep_upgrade') ? 2 : 0);
-    this.workersIdle = this.workersTotal;
-    this.soldiersTotal = 0;
-    this.soldiersMax = 5;
-
-    this.gridWidth = Math.min(34, 18 + Math.floor(level * 1.2));
-    this.gridHeight = Math.min(34, 18 + Math.floor(level * 1.2));
-
-    this.dragonsSlain = 0;
-    this.dragonsTarget = mode === 'dragon' ? Math.min(5, Math.ceil(level / 3)) : 0;
-    this.uncoveredTarget = Math.floor(this.gridWidth * this.gridHeight * 0.45);
-    this.chestsTarget = Math.max(2, Math.floor(level / 2));
-    this.chestsCollected = 0;
-
-    this.projectiles = [];
-    this.particles = [];
-    this.dragons = [];
-    this.goblins = [];
-    this.workers = [];
-    this.sappersList = [];
-    this.soldiers = [];
-    this.settlers = [];
-    this.natives = [];
-    this.portals = [];
-    this.falcons = [];
-    this.catapultStones = [];
-
-    this.generateBoard();
-    this.centerCamera();
-    this.updateUI();
-    this.notify(t(this.getModeNameKey()) + ' - ' + t('levelLabel') + ' ' + level, '⚔️');
-  }
-
-  generateBoard() {
+  // --- Procedural Continental Landmass Generation ---
+  generateContinentalMap() {
     this.grid = [];
+    const cx = this.gridWidth / 2;
+    const cy = this.gridHeight / 2;
+    const maxRadius = Math.min(cx, cy) * 0.88;
+
     for (let y = 0; y < this.gridHeight; y++) {
       const row = [];
       for (let x = 0; x < this.gridWidth; x++) {
-        let terrain = 'grass';
-        if (Math.random() < 0.08) terrain = 'water';
-        else if (Math.random() < 0.12) terrain = 'trees';
+        // Distance-based continental island with organic harmonic bays and peninsulas
+        const dx = (x - cx) / cx;
+        const dy = (y - cy) / cy;
+        const dist = Math.hypot(dx * 1.2, dy * 1.0);
+
+        // Organic coastline disturbance
+        const angle = Math.atan2(dy, dx);
+        const noise = Math.sin(angle * 3.5 + 1.2) * 0.18 + Math.cos(angle * 6.0) * 0.12 + Math.sin(x * 0.7) * Math.cos(y * 0.7) * 0.15;
+        const continentalEdge = 0.78 + noise;
+
+        let terrain = 'water';
+        if (dist < continentalEdge) {
+          // Inside the continent
+          const lakeNoise = Math.sin(x * 1.4) * Math.cos(y * 1.4);
+          const treeNoise = Math.cos(x * 0.8 + y * 0.6);
+
+          if (lakeNoise > 0.68 && dist < 0.5) {
+            terrain = 'lake';
+          } else if (treeNoise > 0.3) {
+            terrain = 'trees';
+          } else {
+            terrain = 'grass';
+          }
+        } else if (dist < continentalEdge + 0.12) {
+          terrain = 'sea'; // Coastal water
+        } else {
+          terrain = 'water'; // Deep ocean
+        }
 
         row.push({
           x, y,
@@ -246,7 +220,7 @@ class KeepsweeperGame {
           road: false,
           terrain,
           danger: false,
-          dangerType: null, // 'mine', 'dragon_nest', 'goblin_portal', 'trap', 'chest', 'wigwam'
+          dangerType: null,
           adjacentDangers: 0,
           building: null,
           burnt: false
@@ -255,139 +229,168 @@ class KeepsweeperGame {
       this.grid.push(row);
     }
 
-    // Keep at center
-    const kx = Math.floor(this.gridWidth / 2);
-    const ky = Math.floor(this.gridHeight / 2);
+    // Coastal Expedition Landing: find a coastal grass/trees tile on the southern/eastern shore
+    let kx = Math.floor(cx);
+    let ky = Math.floor(cy + maxRadius * 0.45);
+    // Find closest land tile bordering water
+    for (let y = this.gridHeight - 4; y >= 4; y--) {
+      for (let x = 6; x < this.gridWidth - 6; x++) {
+        if (this.grid[y][x].terrain === 'grass' || this.grid[y][x].terrain === 'trees') {
+          // Check if it borders sea/water
+          let hasCoast = false;
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              const ny = y + dy;
+              const nx = x + dx;
+              if (this.isValidTile(nx, ny) && (this.grid[ny][nx].terrain === 'water' || this.grid[ny][nx].terrain === 'sea')) {
+                hasCoast = true;
+              }
+            }
+          }
+          if (hasCoast) {
+            kx = x;
+            ky = y;
+            break;
+          }
+        }
+      }
+      if (kx !== Math.floor(cx)) break;
+    }
+
+    this.playerStart = { x: kx, y: ky };
     const keepTile = this.grid[ky][kx];
     keepTile.terrain = 'grass';
     keepTile.covered = false;
     keepTile.road = true;
     keepTile.building = {
       type: 'keep',
-      hp: this.techsUnlocked.includes('keep_upgrade') ? 1500 : 1000,
-      maxHp: this.techsUnlocked.includes('keep_upgrade') ? 1500 : 1000,
+      hp: 1200,
+      maxHp: 1200,
       level: 1
     };
 
-    // 3x3 surrounding starting tiles
+    // Initial safe beachhead around starting camp
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         const nx = kx + dx;
         const ny = ky + dy;
         if (this.isValidTile(nx, ny)) {
           this.grid[ny][nx].covered = false;
-          this.grid[ny][nx].terrain = 'grass';
-          if (Math.abs(dx) + Math.abs(dy) === 1) {
-            this.grid[ny][nx].road = true; // Paved roads around Keep
-          }
+          if (this.grid[ny][nx].terrain === 'trees') this.grid[ny][nx].terrain = 'grass';
         }
       }
     }
 
-    // Spawn Workers
-    for (let i = 0; i < this.workersTotal; i++) {
-      this.workers.push({
-        x: kx * this.tileSize + 8 + Math.random() * 24,
-        y: ky * this.tileSize + 8 + Math.random() * 24,
-        targetX: kx * this.tileSize,
-        targetY: ky * this.tileSize,
-        facing: 1,
-        walkAnim: 0
-      });
-    }
+    // Place Initial Entities
+    this.workers = [
+      { x: kx * this.tileSize + 8, y: ky * this.tileSize + 8, targetX: kx * this.tileSize, targetY: ky * this.tileSize, facing: 1, walkAnim: 0 },
+      { x: kx * this.tileSize + 20, y: ky * this.tileSize + 16, targetX: kx * this.tileSize, targetY: ky * this.tileSize, facing: 1, walkAnim: 0 },
+      { x: kx * this.tileSize + 14, y: ky * this.tileSize + 24, targetX: kx * this.tileSize, targetY: ky * this.tileSize, facing: 1, walkAnim: 0 }
+    ];
 
-    // Spawn Sappers
+    this.sappersList = [];
     for (let i = 0; i < this.sappers; i++) {
       this.sappersList.push({
-        x: kx * this.tileSize + 8 + Math.random() * 24,
-        y: ky * this.tileSize + 8 + Math.random() * 24,
+        id: i + 1,
+        name: i === 0 ? 'Saper Jan' : (i === 1 ? 'Saper Wilhelm' : 'Saper Tomasz'),
+        x: kx * this.tileSize + 10 + i * 8,
+        y: ky * this.tileSize + 10,
         targetX: kx * this.tileSize,
         targetY: ky * this.tileSize,
+        state: 'idle', // 'idle', 'walking_to_dig', 'digging'
+        digTile: null,
         facing: 1,
         walkAnim: 0
       });
     }
 
-    // Danger density & generation
-    const dangerDensity = 0.14 + (this.level * 0.005);
-    const totalTiles = this.gridWidth * this.gridHeight;
-    let dangerCount = Math.floor(totalTiles * dangerDensity);
-
-    // 1. Dragon Nests
-    let dragonsToPlace = this.dragonsTarget;
-    if (this.mode !== 'dragon' && Math.random() < 0.3) dragonsToPlace = 1;
-
-    while (dragonsToPlace > 0) {
-      const rx = Math.floor(Math.random() * this.gridWidth);
-      const ry = Math.floor(Math.random() * this.gridHeight);
-      const distToKeep = Math.hypot(rx - kx, ry - ky);
-      if (distToKeep > 5 && !this.grid[ry][rx].danger && this.grid[ry][rx].covered) {
-        this.grid[ry][rx].danger = true;
-        this.grid[ry][rx].dangerType = 'dragon_nest';
-        this.grid[ry][rx].terrain = 'grass';
-        dragonsToPlace--;
-        dangerCount--;
-      }
-    }
-
-    // 2. Goblin Portals
-    const portalCount = Math.min(4, 1 + Math.floor(this.level / 4));
-    for (let p = 0; p < portalCount; p++) {
+    // Volcanic Dragon Caves in deep mountains/forests
+    const caveCount = Math.max(1, Math.min(3, Math.floor(this.level / 2)));
+    for (let c = 0; c < caveCount; c++) {
       let placed = false;
       while (!placed) {
         const rx = Math.floor(Math.random() * this.gridWidth);
         const ry = Math.floor(Math.random() * this.gridHeight);
-        const distToKeep = Math.hypot(rx - kx, ry - ky);
-        if (distToKeep > 4 && !this.grid[ry][rx].danger && this.grid[ry][rx].covered) {
-          this.grid[ry][rx].danger = true;
-          this.grid[ry][rx].dangerType = 'goblin_portal';
-          this.grid[ry][rx].terrain = 'grass';
+        const dist = Math.hypot(rx - kx, ry - ky);
+        const t = this.grid[ry][rx];
+        if (dist > 7 && (t.terrain === 'grass' || t.terrain === 'trees') && t.covered) {
+          t.danger = true;
+          t.dangerType = 'dragon_nest';
           placed = true;
-          dangerCount--;
         }
       }
     }
 
-    // 3. Civilization 1 Native Tribal Villages (Wigwams)
-    const wigwamCount = Math.max(2, Math.floor(this.level / 2.5));
+    // Native Tribal Wigwams (Civ 1 style villages)
+    const wigwamCount = Math.max(2, Math.floor(this.level / 2));
     for (let w = 0; w < wigwamCount; w++) {
       let placed = false;
       while (!placed) {
         const rx = Math.floor(Math.random() * this.gridWidth);
         const ry = Math.floor(Math.random() * this.gridHeight);
-        const distToKeep = Math.hypot(rx - kx, ry - ky);
-        if (distToKeep > 3 && !this.grid[ry][rx].danger && this.grid[ry][rx].covered && this.grid[ry][rx].terrain !== 'water') {
-          this.grid[ry][rx].dangerType = 'wigwam';
+        const dist = Math.hypot(rx - kx, ry - ky);
+        const t = this.grid[ry][rx];
+        if (dist > 4 && t.terrain === 'grass' && t.covered && !t.danger) {
+          t.dangerType = 'wigwam';
           placed = true;
         }
       }
     }
 
-    // 4. Treasure Chests
-    const chestCount = Math.max(3, Math.floor(this.level * 1.2));
-    for (let c = 0; c < chestCount; c++) {
+    // Hidden Gold Chests & Relics
+    const chestCount = Math.max(3, Math.floor(this.level * 1.5)) * (this.activeHeroPerk === 'prospector' ? 2 : 1);
+    for (let ch = 0; ch < chestCount; ch++) {
       let placed = false;
       while (!placed) {
         const rx = Math.floor(Math.random() * this.gridWidth);
         const ry = Math.floor(Math.random() * this.gridHeight);
-        if (!this.grid[ry][rx].danger && this.grid[ry][rx].covered && this.grid[ry][rx].terrain !== 'water' && this.grid[ry][rx].dangerType !== 'wigwam') {
-          this.grid[ry][rx].dangerType = 'chest';
+        const t = this.grid[ry][rx];
+        if ((t.terrain === 'grass' || t.terrain === 'trees') && t.covered && !t.danger && !t.dangerType) {
+          t.dangerType = 'chest';
           placed = true;
         }
       }
     }
 
-    // 5. Mines & Traps for remaining danger quota
-    while (dangerCount > 0) {
-      const rx = Math.floor(Math.random() * this.gridWidth);
-      const ry = Math.floor(Math.random() * this.gridHeight);
-      const distToKeep = Math.hypot(rx - kx, ry - ky);
-      if (distToKeep > 2 && !this.grid[ry][rx].danger && this.grid[ry][rx].covered) {
-        this.grid[ry][rx].danger = true;
-        this.grid[ry][rx].dangerType = 'mine';
-        dangerCount--;
+    // Goblin Portals
+    const portalCount = Math.min(3, 1 + Math.floor(this.level / 3));
+    for (let p = 0; p < portalCount; p++) {
+      let placed = false;
+      while (!placed) {
+        const rx = Math.floor(Math.random() * this.gridWidth);
+        const ry = Math.floor(Math.random() * this.gridHeight);
+        const dist = Math.hypot(rx - kx, ry - ky);
+        const t = this.grid[ry][rx];
+        if (dist > 5 && (t.terrain === 'grass' || t.terrain === 'trees') && t.covered && !t.danger && !t.dangerType) {
+          t.danger = true;
+          t.dangerType = 'goblin_portal';
+          placed = true;
+        }
       }
     }
+
+    // Mines & Traps Quota
+    const dangerDensity = 0.13 + (this.level * 0.005);
+    const totalLandTiles = this.grid.flat().filter(t => t.terrain !== 'water' && t.terrain !== 'sea').length;
+    let mineQuota = Math.floor(totalLandTiles * dangerDensity);
+
+    while (mineQuota > 0) {
+      const rx = Math.floor(Math.random() * this.gridWidth);
+      const ry = Math.floor(Math.random() * this.gridHeight);
+      const dist = Math.hypot(rx - kx, ry - ky);
+      const t = this.grid[ry][rx];
+      if (dist > 2.5 && t.covered && (t.terrain === 'grass' || t.terrain === 'trees') && !t.danger && !t.dangerType) {
+        t.danger = true;
+        t.dangerType = 'mine';
+        mineQuota--;
+      }
+    }
+
+    // Position AI Rivals on opposing continental shores
+    this.aiRivals.spain.x = Math.max(2, kx - 14);
+    this.aiRivals.spain.y = Math.max(2, ky - 10);
+    this.aiRivals.france.x = Math.min(this.gridWidth - 3, kx + 12);
+    this.aiRivals.france.y = Math.max(2, ky - 8);
 
     this.recalculateAdjacentNumbers();
   }
@@ -416,21 +419,63 @@ class KeepsweeperGame {
   }
 
   centerCamera() {
-    const kx = Math.floor(this.gridWidth / 2) * this.tileSize;
-    const ky = Math.floor(this.gridHeight / 2) * this.tileSize;
-    this.camX = this.canvas.width / 2 - kx * this.zoom;
-    this.camY = this.canvas.height / 2 - ky * this.zoom;
+    this.resizeCanvas();
+    const kx = (this.playerStart ? this.playerStart.x : Math.floor(this.gridWidth / 2)) * this.tileSize;
+    const ky = (this.playerStart ? this.playerStart.y : Math.floor(this.gridHeight / 2)) * this.tileSize;
+    this.camX = (this.canvas.width / 2) - kx * this.zoom;
+    this.camY = (this.canvas.height / 2) - ky * this.zoom;
   }
 
-  // --- Controls & Interaction (PPM Flag Fix) ---
+  // --- Start Level & Reset ---
+  startLevel(mode, level) {
+    this.mode = mode;
+    this.level = level;
+    this.elapsedSeconds = 0;
+    this.isGameOver = false;
+    this.isVictory = false;
+    this.blundersCount = 0;
+    this.uncoveredCount = 0;
+    this.hasBlastShield = (this.activeHeroPerk === 'iron_skin');
+    this.activePower = null;
+    this.digQueue = [];
+
+    this.sappersMax = this.techsUnlocked.includes('resSapperAcademy') ? 5 : 3;
+    this.sappers = this.sappersMax;
+    this.resources = 240 + (this.techsUnlocked.includes('keep_upgrade') ? 60 : 0);
+
+    this.projectiles = [];
+    this.particles = [];
+    this.floatingTexts = [];
+    this.dragons = [];
+    this.goblins = [];
+    this.settlers = [];
+    this.natives = [];
+    this.portals = [];
+    this.falcons = [];
+    this.catapultStones = [];
+
+    this.generateContinentalMap();
+    this.centerCamera();
+    this.updateUI();
+    this.updateSettlementBadge();
+    this.renderMinimap();
+
+    this.notify(`Nowy Świat: ${t(this.getModeNameKey())} (Poziom ${level})`, '🗺️');
+  }
+
+  // --- Input & Controls: Middle Mouse Pan, 1x PPM Flag, Physical Digging ---
   bindEvents() {
+    // Canvas Mousedown: Left, Middle (MMB drag), Right (PPM)
     this.canvas.addEventListener('mousedown', (e) => {
+      // Middle Mouse Button (MMB) or Shift+Click = Pan Camera
       if (e.button === 1 || e.shiftKey) {
+        e.preventDefault();
         this.isPanning = true;
         this.panStartX = e.clientX - this.camX;
         this.panStartY = e.clientY - this.camY;
         return;
       }
+
       this.handlePointerDown(e.clientX, e.clientY, e.button);
     });
 
@@ -449,68 +494,62 @@ class KeepsweeperGame {
       const wy = (my - this.camY) / this.zoom;
       const tx = Math.floor(wx / this.tileSize);
       const ty = Math.floor(wy / this.tileSize);
+
       if (this.isValidTile(tx, ty)) {
         this.hoverTile = { x: tx, y: ty };
+        this.updateHoverTileInspector(tx, ty);
       } else {
         this.hoverTile = null;
       }
     });
 
-    window.addEventListener('mouseup', () => {
-      this.isPanning = false;
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 1 || this.isPanning) {
+        this.isPanning = false;
+      }
     });
 
+    // 1x PPM Reliable Right-Click (no accidental dragging)
     this.canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       this.handlePointerDown(e.clientX, e.clientY, 2);
     });
 
+    // Zoom on wheel
     this.canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
       const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
       this.setZoom(this.zoom * zoomFactor, e.clientX, e.clientY);
     }, { passive: false });
 
-    // Touch controls
-    let touchStartDist = 0;
-    this.canvas.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1) {
-        const t = e.touches[0];
-        this.panStartX = t.clientX - this.camX;
-        this.panStartY = t.clientY - this.camY;
-        this.touchStartTime = Date.now();
-      } else if (e.touches.length === 2) {
-        touchStartDist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-      }
-    });
+    // Interactive Minimap Pan & Drag
+    if (this.minimapCanvas) {
+      const panFromMinimap = (e) => {
+        const rect = this.minimapCanvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const relX = mx / this.minimapCanvas.width;
+        const relY = my / this.minimapCanvas.height;
 
-    this.canvas.addEventListener('touchmove', (e) => {
-      if (e.touches.length === 1) {
-        const t = e.touches[0];
-        this.camX = t.clientX - this.panStartX;
-        this.camY = t.clientY - this.panStartY;
-      } else if (e.touches.length === 2) {
-        const dist = Math.hypot(
-          e.touches[0].clientX - e.touches[1].clientX,
-          e.touches[0].clientY - e.touches[1].clientY
-        );
-        if (touchStartDist > 0) {
-          const factor = dist / touchStartDist;
-          this.setZoom(this.zoom * factor);
-          touchStartDist = dist;
-        }
-      }
-    });
+        const targetWorldX = relX * (this.gridWidth * this.tileSize);
+        const targetWorldY = relY * (this.gridHeight * this.tileSize);
 
-    this.canvas.addEventListener('touchend', (e) => {
-      if (Date.now() - this.touchStartTime < 250) {
-        const t = e.changedTouches[0];
-        this.handlePointerDown(t.clientX, t.clientY, this.flagMode ? 2 : 0);
-      }
-    });
+        this.camX = (this.canvas.width / 2) - targetWorldX * this.zoom;
+        this.camY = (this.canvas.height / 2) - targetWorldY * this.zoom;
+      };
+
+      let minimapMouseDown = false;
+      this.minimapCanvas.addEventListener('mousedown', (e) => {
+        minimapMouseDown = true;
+        panFromMinimap(e);
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (minimapMouseDown) panFromMinimap(e);
+      });
+      window.addEventListener('mouseup', () => {
+        minimapMouseDown = false;
+      });
+    }
   }
 
   setZoom(newZoom, centerX, centerY) {
@@ -525,7 +564,8 @@ class KeepsweeperGame {
     this.camX = cx - wx * this.zoom;
     this.camY = cy - wy * this.zoom;
 
-    document.getElementById('zoomLevelText').textContent = Math.round(this.zoom * 100) + '%';
+    const zoomTag = document.getElementById('minimapZoomTag');
+    if (zoomTag) zoomTag.textContent = Math.round(this.zoom * 100) + '%';
   }
 
   handlePointerDown(clientX, clientY, button) {
@@ -541,43 +581,37 @@ class KeepsweeperGame {
     const ty = Math.floor(wy / this.tileSize);
 
     if (!this.isValidTile(tx, ty)) return;
-
     const tile = this.grid[ty][tx];
 
-    // Right-click or Flag mode: ALWAYS TOGGLES & REMOVES CLEANLY
+    // 1x Right-Click or Touch Flag Mode: Instantly Toggles Flag
     if (button === 2 || (button === 0 && this.flagMode)) {
       if (tile.covered) {
-        if (tile.flagged || tile.oracleFlag) {
-          tile.flagged = false;
-          tile.oracleFlag = false;
-          sfx.playFlag();
-        } else {
-          tile.flagged = true;
-          sfx.playFlag();
-        }
+        tile.flagged = !tile.flagged;
+        sfx.playFlag();
+        this.updateUI();
+        this.renderMinimap();
       } else if (!tile.covered && tile.adjacentDangers > 0) {
-        // Right-click chord on revealed numbers!
         this.chordTile(tx, ty);
       }
       return;
     }
 
-    // Cast active Royal Power!
+    // Cast active power
     if (this.activePower) {
       this.executePowerOnTile(tx, ty, this.activePower);
       return;
     }
 
-    // Left-click with Building selected: Construct building!
+    // Build building
     if (this.selectedBuildingType) {
       this.attemptBuild(tx, ty, this.selectedBuildingType);
       return;
     }
 
-    // Left-click on Covered Tile: Dig / Uncover
+    // Left-click on Covered Tile: DISPATCH NEAREST SAPPER TO DIG!
     if (tile.covered) {
-      if (tile.flagged || tile.oracleFlag) return; // Protected by flag
-      this.uncoverTile(tx, ty);
+      if (tile.flagged || tile.oracleFlag) return; // Protected
+      this.dispatchSapperToDig(tx, ty);
     } else {
       if (tile.adjacentDangers > 0) {
         this.chordTile(tx, ty);
@@ -585,339 +619,204 @@ class KeepsweeperGame {
     }
   }
 
-  // --- Sapper Uncover & Civilization 1 Tribal Contact ---
-  uncoverTile(tx, ty) {
+  // --- Physical Sapper Digging & Fatal Casualties ---
+  dispatchSapperToDig(tx, ty) {
     const tile = this.grid[ty][tx];
-    if (!tile.covered || tile.flagged || tile.oracleFlag) return;
+    if (tile.digOrdered) return;
 
-    tile.covered = false;
-    sfx.playDig();
+    // Find closest idle sapper
+    const targetPx = tx * this.tileSize;
+    const targetPy = ty * this.tileSize;
 
-    const alchemyBonus = this.techsUnlocked.includes('alchemy') ? 1.25 : 1.0;
-    this.resources += Math.round(2 * alchemyBonus);
+    let nearestSapper = null;
+    let minDist = Infinity;
 
-    // Check for Danger & Events
-    if (tile.danger) {
-      if (tile.dangerType === 'dragon_nest') {
-        this.spawnDragon(tx, ty);
-        this.notify(t('dragonAwakened'), '🐉');
-        sfx.playDragonRoar();
-      } else if (tile.dangerType === 'goblin_portal') {
-        this.activatePortal(tx, ty);
-        this.notify(t('portalSpawned'), '🌀');
-      } else {
-        // Mine or Trap: SKUCHA!
-        this.handleHazardDetonation(tx, ty);
-      }
-    } else if (tile.dangerType === 'chest') {
-      const bonusGold = Math.round((60 + Math.floor(Math.random() * 40)) * alchemyBonus);
-      const gotSeal = Math.random() < 0.5 ? 1 : 0;
-      this.resources += bonusGold;
-      if (gotSeal) {
-        this.royalSeals += gotSeal;
-        localStorage.setItem('ks_seals', this.royalSeals);
-      }
-      this.chestsCollected++;
-      sfx.playChest();
-      this.notify(t('chestFound', { gold: bonusGold, seals: gotSeal }), '💎');
-    } else if (tile.dangerType === 'wigwam') {
-      // Civilization 1 Native Tribal Village Contact!
-      sfx.playVictory();
-      const giftRoll = Math.floor(Math.random() * 4);
-      let giftName = '';
-      if (giftRoll === 0) {
-        this.royalSeals += 2;
-        localStorage.setItem('ks_seals', this.royalSeals);
-        giftName = t('giftSeals');
-      } else if (giftRoll === 1) {
-        this.resources += 80;
-        giftName = t('giftGold');
-      } else if (giftRoll === 2) {
-        this.soldiersMax += 2;
-        this.soldiersTotal++;
-        this.natives.push({
-          x: tx * this.tileSize + 10,
-          y: ty * this.tileSize + 10,
-          targetX: tx * this.tileSize,
-          targetY: ty * this.tileSize,
-          hp: 140,
-          facing: 1
-        });
-        giftName = t('giftWarriors');
-      } else {
-        let marked = 0;
-        for (let r = 1; r <= 6 && marked < 4; r++) {
-          for (let dy = -r; dy <= r; dy++) {
-            for (let dx = -r; dx <= r; dx++) {
-              const nx = tx + dx;
-              const ny = ty + dy;
-              if (this.isValidTile(nx, ny) && this.grid[ny][nx].danger && !this.grid[ny][nx].oracleFlag && this.grid[ny][nx].covered) {
-                this.grid[ny][nx].oracleFlag = true;
-                marked++;
-                if (marked >= 4) break;
-              }
-            }
-            if (marked >= 4) break;
-          }
+    this.sappersList.forEach(s => {
+      if (s.state === 'idle') {
+        const d = Math.hypot(s.x - targetPx, s.y - targetPy);
+        if (d < minDist) {
+          minDist = d;
+          nearestSapper = s;
         }
-        giftName = t('giftMap');
       }
-      this.notify(t('nativeVillageFound', { gift: giftName }), '🏕️');
-    }
+    });
 
-    if (tile.adjacentDangers === 0 && !tile.danger && !tile.crater) {
-      sfx.playCascade();
-      this.floodFillReveal(tx, ty);
-    }
+    if (nearestSapper) {
+      tile.digOrdered = true;
+      nearestSapper.state = 'walking_to_dig';
+      nearestSapper.digTile = { tx, ty };
+      nearestSapper.targetX = targetPx + 8;
+      nearestSapper.targetY = targetPy + 8;
 
-    this.checkVictoryCondition();
-    this.updateUI();
+      // Update right panel active unit card
+      this.updateActiveUnitCard(nearestSapper, `Biegnie do wykopu [${tx} x ${ty}]`);
+      sfx.playRecruit();
+    } else {
+      // If no sapper available
+      if (this.sappers > 0) {
+        // Queue digging order
+        tile.digOrdered = true;
+        this.digQueue.push({ tx, ty });
+        this.notify('Wszyscy saperzy w terenie! Rozkaz dodano do kolejki.', '⏳');
+      } else {
+        // 0 Sappers! Emergency risky excavation
+        this.notify('⚠️ Brak żywych saperów! Zrekrutuj sapera (+⛑️) lub użyj Wyroczni!', '⚠️');
+      }
+    }
   }
 
-  handleHazardDetonation(tx, ty) {
+  executeSapperDigAt(sapper, tx, ty) {
+    const tile = this.grid[ty][tx];
+    tile.digOrdered = false;
+
+    // Dig particles & SFX
+    sfx.playDig();
+    this.createDirtSparks(tx * this.tileSize + 20, ty * this.tileSize + 20);
+
+    // Check Lucky Dud Hero Perk (3% chance mine is a dud)
+    if (tile.danger && tile.dangerType === 'mine' && this.activeHeroPerk === 'lucky_dud' && Math.random() < 0.03) {
+      tile.danger = false;
+      this.notify('🍀 Szczęście Sapera: Mina okazała się niewybuchem!', '🍀');
+    }
+
+    // Check if hazard / mine exploded under sapper's feet!
+    if (tile.danger) {
+      this.handleHazardDetonationUnderSapper(sapper, tx, ty);
+    } else {
+      // Safe reveal
+      this.uncoverSafeTile(tx, ty);
+      sapper.state = 'idle';
+      this.updateActiveUnitCard(sapper, 'Czuwa / Gotowy');
+      this.checkAndProcessDigQueue();
+    }
+  }
+
+  handleHazardDetonationUnderSapper(sapper, tx, ty) {
     const tile = this.grid[ty][tx];
     tile.danger = false;
     tile.crater = true;
     tile.covered = false;
 
+    // Increment blunder / skucha count!
+    this.blundersCount++;
+    this.updateUI();
+
+    // Screen Shake & SFX
     const win = document.getElementById('appWindow');
     if (win) {
       win.classList.remove('screen-shake');
       void win.offsetWidth;
       win.classList.add('screen-shake');
     }
-
     sfx.playExplosion();
     this.createExplosion(tx * this.tileSize + 20, ty * this.tileSize + 20);
 
+    // Check Shield Protection
     if (this.hasBlastShield) {
       this.hasBlastShield = false;
       sfx.playShield();
-      this.notify(t('sapperSavedByArmor'), '🛡️');
-      this.updateUI();
+      this.notify('🛡️ Pancerz ochronny ocalił życie sapera!', '🛡️');
+      sapper.state = 'idle';
+      this.updateActiveUnitCard(sapper, 'Ocalony przez Pancerz');
+      this.checkAndProcessDigQueue();
       return;
     }
 
-    if (this.techsUnlocked.includes('resFlakArmor') && Math.random() < 0.5) {
-      sfx.playShield();
-      this.notify("🛡️ Pancerz przeciwodłamkowy ocalił życie sapera!", '🛡️');
-      this.updateUI();
+    // Check Unyielding Commander Hero Perk
+    if (this.activeHeroPerk === 'unyielding' && this.blundersCount === 1) {
+      this.notify('🌟 Niezłomny Duch: Pierwsza skucha została zniwelowana bez strat!', '🌟');
+      sapper.state = 'idle';
+      this.checkAndProcessDigQueue();
       return;
     }
 
-    if (this.sappers > 0) {
-      this.sappers--;
-      if (this.sappersList.length > 0) {
-        this.sappersList.pop();
-      }
-      this.notify(t('sapperCasualty', { remaining: this.sappers }), '💥');
+    // SAPPER IS KILLED!
+    this.sappers--;
+    const idx = this.sappersList.indexOf(sapper);
+    if (idx !== -1) this.sappersList.splice(idx, 1);
 
-      if (this.sappers === 0) {
-        this.notify(t('noSappersWarning'), '⚠️');
-      }
-    } else {
-      const kx = Math.floor(this.gridWidth / 2);
-      const ky = Math.floor(this.gridHeight / 2);
-      const keep = this.grid[ky][kx].building;
-      if (keep) {
-        keep.hp -= 250;
-        this.notify("💥 Brak wolnych saperów! Eksplozja uszkodziła Zamek (-250 HP)!", '🏰');
-        if (keep.hp <= 0) {
-          this.triggerDefeat();
-        }
-      }
+    this.notify(`💥 SKUCHA! Mina zdetonowała pod nogami sapera! Stracono sapera (Pozostało: ${this.sappers})`, '💥');
+
+    // Earth Alchemy Hero Perk: leaves gold vein instead of crater
+    if (this.activeHeroPerk === 'earth_alchemy') {
+      tile.crater = false;
+      tile.dangerType = 'chest';
+      this.notify('⚗️ Alchemia Ziemi: Miejsce wybuchu przekształciło się w żyłę złota!', '💰');
     }
 
-    this.recalculateAdjacentNumbers();
-  }
-
-  recruitSapper() {
-    const cost = this.techsUnlocked.includes('resSapperAcademy') ? 30 : 40;
-    if (this.resources < cost) {
-      this.notify("⚠️ Brak zasobów na zaciąg sapera (Potrzeba: " + cost + " 💰)!", '💰');
-      return;
-    }
-    if (this.sappers >= this.sappersMax) {
-      this.notify("⚠️ Korpus saperski ma już pełen stan (" + this.sappersMax + ")!", '⛑️');
-      return;
-    }
-
-    this.resources -= cost;
-    this.sappers++;
-    const kx = Math.floor(this.gridWidth / 2);
-    const ky = Math.floor(this.gridHeight / 2);
-    this.sappersList.push({
-      x: kx * this.tileSize + 8 + Math.random() * 20,
-      y: ky * this.tileSize + 8 + Math.random() * 20,
-      targetX: kx * this.tileSize,
-      targetY: ky * this.tileSize,
-      facing: 1
-    });
-
-    sfx.playRecruit();
-    this.notify(t('sapperRecruited', { cost }), '⛑️');
-    this.updateUI();
-  }
-
-  // --- Royal Powers System ---
-  activatePower(powerKey) {
-    if (this.powerCooldowns[powerKey] > 0) {
-      this.notify(t('powerCooldown', { sec: this.powerCooldowns[powerKey] }), '⏳');
-      return;
-    }
-
-    if (powerKey === 'shield') {
-      this.hasBlastShield = true;
-      sfx.playShield();
-      this.startPowerCooldown('shield');
-      this.notify("🛡️ Pancerz saperski aktywny! Następna skucha nie przyniesie ofiar.", '🛡️');
-      this.updateUI();
-      return;
-    }
-
-    this.activePower = powerKey;
-    document.querySelectorAll('.power-card').forEach(c => c.classList.remove('active'));
-    const card = document.getElementById('powerCard' + powerKey.charAt(0).toUpperCase() + powerKey.slice(1));
-    if (card) card.classList.add('active');
-
-    this.notify(t('powerActiveHint') + t('power' + powerKey.charAt(0).toUpperCase() + powerKey.slice(1)), '✨');
-  }
-
-  startPowerCooldown(powerKey) {
-    let cd = this.powerBaseCooldowns[powerKey] || 25;
-    if (this.techsUnlocked.includes('resFocusRegen')) {
-      cd = Math.round(cd * 0.65);
-    }
-    this.powerCooldowns[powerKey] = cd;
-    this.activePower = null;
-    document.querySelectorAll('.power-card').forEach(c => c.classList.remove('active'));
-  }
-
-  executePowerOnTile(tx, ty, powerKey) {
-    const tile = this.grid[ty][tx];
-
-    if (powerKey === 'oracle') {
-      if (!tile.covered) {
-        this.notify("Wybierz zakryte pole dla Wyroczni!", "🔮");
-        return;
-      }
-      sfx.playSpell();
-      if (tile.danger) {
-        tile.oracleFlag = true;
-        this.notify("🔮 Wyrocznia ostrzega: Na tym polu czai się śmiertelne zagrożenie! (Złota flaga)", "🔮");
-      } else {
-        tile.covered = false;
-        this.resources += 5;
-        this.notify("🔮 Wyrocznia: Pole jest bezpieczne!", "✨");
-        if (tile.adjacentDangers === 0) this.floodFillReveal(tx, ty);
-      }
-      this.startPowerCooldown('oracle');
-
-    } else if (powerKey === 'falcon') {
-      sfx.playSpell();
-      this.falcons.push({
-        x: this.camX - 50,
-        y: this.camY - 50,
-        targetX: tx * this.tileSize,
-        targetY: ty * this.tileSize,
-        speed: 280
-      });
-
-      let cleared = 0;
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          const nx = tx + dx;
-          const ny = ty + dy;
-          if (this.isValidTile(nx, ny)) {
-            const nTile = this.grid[ny][nx];
-            if (nTile.covered) {
-              if (nTile.danger) {
-                nTile.oracleFlag = true;
-              } else if (cleared < 2) {
-                nTile.covered = false;
-                cleared++;
-              }
-            }
-          }
-        }
-      }
-      this.notify("🦅 Królewski sokół zbadał obszar i oznaczył ukryte miny!", "🦅");
-      this.startPowerCooldown('falcon');
-
-    } else if (powerKey === 'bombard') {
-      if (!tile.covered) {
-        this.notify("Wybierz zakryte pole do ostrzału katapulty!", "💣");
-        return;
-      }
-      sfx.playBombardment();
-      this.catapultStones.push({
-        x: tx * this.tileSize + 80,
-        y: ty * this.tileSize - 200,
-        targetX: tx * this.tileSize + 20,
-        targetY: ty * this.tileSize + 20,
-        speed: 360,
-        tileX: tx,
-        tileY: ty
-      });
-      this.startPowerCooldown('bombard');
-
-    } else if (powerKey === 'probe') {
-      if (!tile.covered) return;
-      sfx.playDig();
-      if (tile.danger) {
-        if (Math.random() < 0.8) {
-          tile.danger = false;
-          tile.crater = true;
-          tile.covered = false;
-          this.resources += 30;
-          sfx.playShield();
-          this.notify(t('sapperDefused', { gold: 30 }), "🧲");
-          this.recalculateAdjacentNumbers();
-        } else {
-          this.handleHazardDetonation(tx, ty);
-        }
-      } else {
-        tile.covered = false;
-        if (tile.adjacentDangers === 0) this.floodFillReveal(tx, ty);
-      }
-      this.startPowerCooldown('probe');
-    }
-
+    this.updateActiveUnitCard(null, 'Poległ na służbie...');
     this.checkVictoryCondition();
     this.updateUI();
+    this.checkAndProcessDigQueue();
+  }
+
+  checkAndProcessDigQueue() {
+    if (this.digQueue.length > 0 && this.sappersList.some(s => s.state === 'idle')) {
+      const next = this.digQueue.shift();
+      this.dispatchSapperToDig(next.tx, next.ty);
+    }
+  }
+
+  uncoverSafeTile(tx, ty) {
+    const tile = this.grid[ty][tx];
+    if (!tile.covered) return;
+    tile.covered = false;
+    this.uncoveredCount++;
+
+    // Resources increase for revealed tiles!
+    const midasBonus = this.activeHeroPerk === 'midas_touch' ? 1.5 : 1.0;
+    const goldEarned = Math.round(2 * midasBonus);
+    this.resources += goldEarned;
+    this.addFloatingText(`+${goldEarned} 💰`, tx * this.tileSize + 20, ty * this.tileSize + 10, '#ffd700');
+
+    // Uncovered special features
+    if (tile.dangerType === 'chest') {
+      const bonusGold = Math.round((70 + Math.floor(Math.random() * 50)) * midasBonus);
+      this.resources += bonusGold;
+      this.chestsCollected++;
+      sfx.playChest();
+      this.addFloatingText(`+${bonusGold} 💰 SKARB!`, tx * this.tileSize + 20, ty * this.tileSize - 10, '#ffea00');
+      this.notify(`💎 Odnaleziono Skrzynię Złota (+${bonusGold} 💰)!`, '💎');
+    } else if (tile.dangerType === 'wigwam') {
+      // Civ 1 Native Tribal Village Contact
+      sfx.playVictory();
+      this.resources += 80;
+      this.royalSeals += 2;
+      localStorage.setItem('ks_seals', this.royalSeals);
+      this.notify('🏕️ Wioska Indian! Starszyzna ofiarowała: +80 💰 i +2 👑 Pieczęcie!', '🏕️');
+    }
+
+    // Cascade reveal if 0 adjacent dangers
+    if (tile.adjacentDangers === 0 && !tile.danger && !tile.crater) {
+      sfx.playCascade();
+      this.floodFillReveal(tx, ty);
+    }
+
+    // Advance Colonization Settlement Evolution
+    this.updateSettlementBadge();
+    this.checkVictoryCondition();
+    this.updateUI();
+    this.renderMinimap();
+
+    // Trigger AI Rival pacing
+    this.triggerAiRivalPacing();
   }
 
   floodFillReveal(startX, startY) {
     const queue = [[startX, startY]];
-    const visited = new Set();
-    visited.add(`${startX},${startY}`);
-
     while (queue.length > 0) {
       const [cx, cy] = queue.shift();
-
       for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
-          if (dx === 0 && dy === 0) continue;
           const nx = cx + dx;
           const ny = cy + dy;
-
           if (this.isValidTile(nx, ny)) {
             const nTile = this.grid[ny][nx];
-            const key = `${nx},${ny}`;
-
-            if (nTile.covered && !nTile.flagged && !nTile.oracleFlag && !visited.has(key)) {
-              visited.add(key);
+            if (nTile.covered && !nTile.flagged && !nTile.oracleFlag && !nTile.danger) {
               nTile.covered = false;
+              this.uncoveredCount++;
               this.resources += 1;
-
-              if (nTile.dangerType === 'chest') {
-                this.resources += 50;
-                this.chestsCollected++;
-              }
-
-              if (nTile.adjacentDangers === 0 && !nTile.danger && !nTile.crater) {
-                queue.push([nx, ny]);
-              }
+              if (nTile.adjacentDangers === 0) queue.push([nx, ny]);
             }
           }
         }
@@ -928,7 +827,6 @@ class KeepsweeperGame {
   chordTile(tx, ty) {
     const tile = this.grid[ty][tx];
     let flagsCount = 0;
-
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         const nx = tx + dx;
@@ -947,7 +845,7 @@ class KeepsweeperGame {
           if (this.isValidTile(nx, ny)) {
             const neighbor = this.grid[ny][nx];
             if (neighbor.covered && !neighbor.flagged && !neighbor.oracleFlag) {
-              this.uncoverTile(nx, ny);
+              this.dispatchSapperToDig(nx, ny);
             }
           }
         }
@@ -955,517 +853,308 @@ class KeepsweeperGame {
     }
   }
 
-  // --- Building System (Civilization 1 Wonder & Settler) ---
-  attemptBuild(tx, ty, type) {
+  // --- AI Rivals Simulation (Colonization Pacing) ---
+  triggerAiRivalPacing() {
+    this.aiTurnCounter++;
+    if (this.aiTurnCounter % 2 !== 0) return; // Moves at half-player pace
+
+    const rivals = Object.values(this.aiRivals);
+    rivals.forEach(rival => {
+      // AI explores a random adjacent coordinate on their side
+      const rx = Math.max(0, Math.min(this.gridWidth - 1, rival.x + Math.floor(Math.random() * 5) - 2));
+      const ry = Math.max(0, Math.min(this.gridHeight - 1, rival.y + Math.floor(Math.random() * 5) - 2));
+
+      if (this.isValidTile(rx, ry)) {
+        const t = this.grid[ry][rx];
+        if (t.covered) {
+          rival.tiles++;
+          if (t.danger) {
+            rival.blunders++;
+            if (Math.random() < 0.3) {
+              this.notify(`📢 Wywiad: ${rival.name} stracili sapera na minie w sektorze [${rx} x ${ry}]!`, '💥');
+            }
+          } else {
+            rival.gold += 2;
+          }
+        }
+      }
+    });
+  }
+
+  // --- Hover Tile Inspector & Yields (Bottom-Right Panel) ---
+  updateHoverTileInspector(tx, ty) {
     const tile = this.grid[ty][tx];
-    const cost = this.buildingCosts[type] || 50;
+    const coordsTag = document.getElementById('tileCoordsTag');
+    const nameEl = document.getElementById('tileTerrainName');
+    const dangerEl = document.getElementById('tileDangerLevel');
+    const iconEl = document.getElementById('tileTerrainIcon');
+    const bonusList = document.getElementById('tileBonusesList');
+
+    if (coordsTag) coordsTag.textContent = `${tx} x ${ty}`;
+
+    let terrainName = 'Równiny Kolonii';
+    let icon = '🌾';
+    let dangerText = 'Teren bezpieczny';
+    let bonuses = ['💰 Złoto: +2', '🌾 Żywność: +2'];
+
+    if (tile.terrain === 'trees') {
+      terrainName = 'Gęsty Las Sosnowy';
+      icon = '🌲';
+      bonuses = ['🌲 Drewno: +2', '💰 Złoto: +1', '🛡️ Obrona: +25%'];
+    } else if (tile.terrain === 'water' || tile.terrain === 'sea') {
+      terrainName = 'Szlak Morski / Wybrzeże';
+      icon = '🌊';
+      bonuses = ['🐟 Połów Ryb: +3', '🚢 Transport Morski'];
+    } else if (tile.terrain === 'lake') {
+      terrainName = 'Jezioro Śródlądowe';
+      icon = '💧';
+      bonuses = ['🐟 Słodka Woda: +2', '🌾 Nawodnienie: +2'];
+    }
 
     if (tile.covered) {
-      this.notify("⚠️ Musisz najpierw odkryć i zabezpieczyć ten teren!", "⚠️");
-      return;
-    }
-    if (tile.building) {
-      this.notify("⚠️ To pole jest już zabudowane!", "⚠️");
-      return;
-    }
-    if (tile.terrain === 'water') {
-      this.notify("⚠️ Nie można budować na wodzie!", "⚠️");
-      return;
-    }
-    if (this.resources < cost) {
-      this.notify("⚠️ Niewystarczająca ilość zasobów!", "💰");
-      return;
-    }
-    if (this.workersIdle <= 0 && type !== 'house') {
-      this.notify("⚠️ Wszyscy robotnicy są zajęci!", "👷");
-      return;
-    }
-
-    this.resources -= cost;
-
-    if (type === 'settler') {
-      // Dispatches a wandering Settler unit!
-      this.settlers.push({
-        x: tx * this.tileSize + 10,
-        y: ty * this.tileSize + 10,
-        targetX: tx * this.tileSize,
-        targetY: ty * this.tileSize,
-        facing: 1
-      });
-      tile.road = true;
-      sfx.playRecruit();
-      this.notify("🐎 Wóz Osadników wyruszył w drogę budować nowe trakty!", "🐎");
+      dangerText = tile.flagged ? '🚩 Oflagowane (podejrzenie miny)' : '❓ Niezbadany ląd (Zagrożenie: 0-3 miny)';
     } else {
-      tile.building = {
-        type,
-        hp: type === 'wall' ? 300 : (type === 'wonder' ? 500 : 200),
-        maxHp: type === 'wall' ? 300 : (type === 'wonder' ? 500 : 200),
-        level: 1,
-        lastActionTime: performance.now()
-      };
-
-      sfx.playBuild();
-      this.notify(`${t('btnBuild')}: ${t('building' + type.charAt(0).toUpperCase() + type.slice(1))}`, "🔨");
-
-      if (type === 'house') {
-        this.workersTotal += 2;
-        this.workersIdle += 2;
-        this.workers.push({
-          x: tx * this.tileSize + 10,
-          y: ty * this.tileSize + 10,
-          targetX: tx * this.tileSize,
-          targetY: ty * this.tileSize,
-          facing: 1
-        });
-      } else if (type === 'barracks') {
-        this.soldiersMax += 5;
-      }
+      dangerText = tile.adjacentDangers > 0 ? `⚠️ Zagrożenie: ${tile.adjacentDangers} sąsiednie miny` : '✅ Teren oczyszczony';
     }
 
-    this.selectedBuildingType = null;
-    document.querySelectorAll('.build-card').forEach(el => el.classList.remove('selected'));
-    document.getElementById('buildPalette').style.display = 'none';
+    if (tile.building) {
+      terrainName = `Osada: ${tile.building.type.toUpperCase()}`;
+      icon = '🏰';
+      bonuses.push('👷 Dochód Kolonialny');
+    }
+
+    if (nameEl) nameEl.textContent = terrainName;
+    if (iconEl) iconEl.textContent = icon;
+    if (dangerEl) dangerEl.textContent = dangerText;
+
+    if (bonusList) {
+      bonusList.innerHTML = bonuses.map(b => `<div class="bonus-pill">${b}</div>`).join('');
+    }
+  }
+
+  updateActiveUnitCard(sapper, statusText) {
+    const nameEl = document.getElementById('unitName');
+    const roleEl = document.getElementById('unitRole');
+    const badgeEl = document.getElementById('unitStateBadge');
+    if (!nameEl) return;
+
+    if (sapper) {
+      nameEl.textContent = sapper.name;
+      if (roleEl) roleEl.textContent = statusText || 'Wykop pól na rozkaz';
+      if (badgeEl) {
+        badgeEl.textContent = sapper.state === 'idle' ? 'Czuwa' : 'W akcji';
+        badgeEl.style.background = sapper.state === 'idle' ? '#2e7d32' : '#f57f17';
+      }
+    } else {
+      nameEl.textContent = 'Korpus Saperski';
+      if (roleEl) roleEl.textContent = statusText || 'Brak aktywnych zleceń';
+    }
+  }
+
+  // --- Colonization Settlement Evolution ---
+  updateSettlementBadge() {
+    const tierPill = document.getElementById('settlementTierPill');
+    const nameEl = document.getElementById('settlementName');
+    const goalEl = document.getElementById('settlementNextGoal');
+    const fillEl = document.getElementById('settlementProgressFill');
+    const iconEl = document.getElementById('settlementTierIcon');
+    if (!nameEl) return;
+
+    let tier = 1;
+    let title = 'Obóz Pionierów';
+    let icon = '🏕️';
+    let nextText = 'Następny: 15 odkrytych pól';
+    let pct = Math.min(100, Math.round((this.uncoveredCount / 15) * 100));
+
+    if (this.uncoveredCount >= 65) {
+      tier = 4;
+      title = 'Królewska Twierdza';
+      icon = '🏰';
+      nextText = 'Maksymalny rozwój cytadeli!';
+      pct = 100;
+    } else if (this.uncoveredCount >= 35) {
+      tier = 3;
+      title = 'Miasteczko Handlowe';
+      icon = '🏘️';
+      nextText = 'Następny poziom: 65 pól';
+      pct = Math.min(100, Math.round(((this.uncoveredCount - 35) / 30) * 100));
+    } else if (this.uncoveredCount >= 15) {
+      tier = 2;
+      title = 'Osada Leśna';
+      icon = '🏡';
+      nextText = 'Następny poziom: 35 pól';
+      pct = Math.min(100, Math.round(((this.uncoveredCount - 15) / 20) * 100));
+    }
+
+    if (tierPill) tierPill.textContent = `Poz. ${tier}`;
+    if (nameEl) nameEl.textContent = title;
+    if (iconEl) iconEl.textContent = icon;
+    if (goalEl) goalEl.textContent = nextText;
+    if (fillEl) fillEl.style.width = pct + '%';
+  }
+
+  // --- Royal Powers & Blind Guessing ---
+  activatePower(key) {
+    if (this.powerCooldowns[key] > 0) {
+      this.notify(`Moc ${key} odnawia się! Poczekaj.`, '⏳');
+      return;
+    }
+    this.activePower = key;
+    this.notify(`Wybrano moc: ${key.toUpperCase()}. Kliknij na pole na planszy!`, '✨');
+  }
+
+  executePowerOnTile(tx, ty, powerKey) {
+    const tile = this.grid[ty][tx];
+    this.activePower = null;
+
+    if (powerKey === 'oracle') {
+      sfx.playOracle();
+      if (tile.danger) {
+        tile.oracleFlag = true;
+        this.notify('🔮 Wyrocznia: Wykryto niebezpieczeństwo! Postawiono złotą flagę.', '🔮');
+      } else {
+        this.uncoverSafeTile(tx, ty);
+        this.notify('🔮 Wyrocznia: Pole jest bezpieczne!', '🔮');
+      }
+      this.powerCooldowns.oracle = this.powerBaseCooldowns.oracle;
+    } else if (powerKey === 'falcon') {
+      sfx.playSpell();
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = tx + dx;
+          const ny = ty + dy;
+          if (this.isValidTile(nx, ny)) {
+            const nt = this.grid[ny][nx];
+            if (nt.covered && !nt.danger) this.uncoverSafeTile(nx, ny);
+          }
+        }
+      }
+      this.notify('🦅 Sokoli Zwiad odsłonił bezpieczne kafelki w rejonie 3x3!', '🦅');
+      this.powerCooldowns.falcon = this.powerBaseCooldowns.falcon;
+    } else if (powerKey === 'shield') {
+      this.hasBlastShield = true;
+      sfx.playShield();
+      this.notify('🛡️ Aktywowano Pancerz Ochronny na następną skuchę!', '🛡️');
+      this.powerCooldowns.shield = this.powerBaseCooldowns.shield;
+    } else if (powerKey === 'bombard') {
+      sfx.playExplosion();
+      this.createExplosion(tx * this.tileSize + 20, ty * this.tileSize + 20);
+      if (tile.danger) {
+        tile.danger = false;
+        tile.crater = true;
+        tile.covered = false;
+        this.notify('💣 Katapulta zniszczyła minę z dystansu bez strat w ludziach!', '💣');
+      } else {
+        this.uncoverSafeTile(tx, ty);
+      }
+      this.powerCooldowns.bombard = this.powerBaseCooldowns.bombard;
+    } else if (powerKey === 'probe') {
+      sfx.playSpell();
+      if (tile.danger) {
+        tile.danger = false;
+        tile.covered = false;
+        this.resources += 40;
+        this.notify('🧲 Sonda bezpiecznie rozbroiła pułapkę! +40 💰', '🧲');
+      } else {
+        this.uncoverSafeTile(tx, ty);
+      }
+      this.powerCooldowns.probe = this.powerBaseCooldowns.probe;
+    }
+
     this.updateUI();
   }
 
-  // --- Entities & Combat ---
-  spawnDragon(tx, ty) {
-    this.dragons.push({
-      x: tx * this.tileSize,
-      y: ty * this.tileSize,
-      hp: 400 + this.level * 80,
-      maxHp: 400 + this.level * 80,
-      speed: 1.2,
-      targetBuilding: null,
-      lastAttack: performance.now(),
-      wingAngle: 0,
-      state: 'flying'
-    });
-  }
-
-  activatePortal(tx, ty) {
-    this.portals.push({
-      x: tx,
-      y: ty,
-      timer: 20,
-      active: true
-    });
-  }
-
-  spawnGoblin(x, y) {
-    this.goblins.push({
-      x: x * this.tileSize,
-      y: y * this.tileSize,
-      hp: 60,
-      maxHp: 60,
-      speed: 0.9,
-      targetX: Math.floor(this.gridWidth / 2) * this.tileSize,
-      targetY: Math.floor(this.gridHeight / 2) * this.tileSize,
-      facing: 1
-    });
-  }
-
-  createExplosion(px, py) {
-    for (let i = 0; i < 25; i++) {
-      this.particles.push({
-        x: px,
-        y: py,
-        vx: (Math.random() - 0.5) * 5,
-        vy: (Math.random() - 0.5) * 5,
-        life: 1.0,
-        color: ['#ff5722', '#ffeb3b', '#e91e63', '#212121'][Math.floor(Math.random() * 4)],
-        size: Math.random() * 5 + 2
-      });
-    }
-  }
-
-  // 1-second simulation tick
+  // --- Main Simulation Tick (Every 1s) ---
   simulationTick() {
     if (this.isGameOver) return;
     this.elapsedSeconds++;
 
-    // Income & Wonder effects
-    let income = 1;
-    for (let y = 0; y < this.gridHeight; y++) {
-      for (let x = 0; x < this.gridWidth; x++) {
-        const b = this.grid[y][x].building;
-        if (!b) continue;
-
-        if (b.type === 'house') {
-          income += 1;
-        } else if (b.type === 'farm') {
-          income += 2;
-        } else if (b.type === 'market') {
-          let houseBonus = 0;
-          for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              const nx = x + dx;
-              const ny = y + dy;
-              if (this.isValidTile(nx, ny) && this.grid[ny][nx].building?.type === 'house') {
-                houseBonus += 2;
-              }
-            }
-          }
-          income += houseBonus;
-        } else if (b.type === 'barracks') {
-          if (this.soldiersTotal < this.soldiersMax && this.resources >= 20) {
-            this.soldiersTotal++;
-            this.resources -= 5;
-            this.soldiers.push({
-              x: x * this.tileSize + 10,
-              y: y * this.tileSize + 10,
-              targetX: x * this.tileSize,
-              targetY: y * this.tileSize,
-              hp: 100,
-              facing: 1
-            });
-          }
-        } else if (b.type === 'wonder') {
-          // Civ 1 Wonder of the World: discovers 1 safe tile every 15s!
-          if (this.elapsedSeconds % 15 === 0) {
-            this.wonderRevealSafeTile();
-          }
-        }
-      }
+    // Sixth Sense Superhero Perk: 1% chance every second to auto-reveal a random safe tile!
+    if (this.activeHeroPerk === 'sixth_sense' && Math.random() < 0.015) {
+      this.autoRevealRandomSafeTile();
     }
 
-    this.resources += income;
+    // Monk's Blessing Perk: recruit free sapper every 60s
+    if (this.activeHeroPerk === 'monk_blessing' && this.elapsedSeconds % 60 === 0 && this.sappers < this.sappersMax) {
+      this.sappers++;
+      this.notify('⛪ Błogosławieństwo Mnicha: Nowy Saper dołączył do Twojej kolonii!', '⛪');
+    }
 
-    // Portal countdowns
-    this.portals.forEach(p => {
-      p.timer--;
-      if (p.timer <= 0) {
-        p.timer = 25;
-        this.spawnGoblin(p.x, p.y);
-        this.notify(t('portalSpawned'), '👹');
-      }
-    });
-
-    // Reduce power cooldowns
+    // Cooldown reductions
     Object.keys(this.powerCooldowns).forEach(k => {
-      if (this.powerCooldowns[k] > 0) {
-        this.powerCooldowns[k]--;
-      }
+      if (this.powerCooldowns[k] > 0) this.powerCooldowns[k]--;
     });
 
     this.updateUI();
   }
 
-  wonderRevealSafeTile() {
-    const candidates = [];
-    for (let y = 0; y < this.gridHeight; y++) {
-      for (let x = 0; x < this.gridWidth; x++) {
-        const tile = this.grid[y][x];
-        if (tile.covered && !tile.danger) {
-          candidates.push({ x, y });
-        }
+  autoRevealRandomSafeTile() {
+    for (let attempts = 0; attempts < 30; attempts++) {
+      const rx = Math.floor(Math.random() * this.gridWidth);
+      const ry = Math.floor(Math.random() * this.gridHeight);
+      const t = this.grid[ry][rx];
+      if (t.covered && !t.danger && !t.flagged) {
+        this.uncoverSafeTile(rx, ry);
+        this.notify('🔮 Siódmy Zmysł: Samoczynnie odkryto bezpieczne pole!', '🔮');
+        break;
       }
-    }
-    if (candidates.length > 0) {
-      const pick = candidates[Math.floor(Math.random() * candidates.length)];
-      sfx.playSpell();
-      this.uncoverTile(pick.x, pick.y);
-      this.notify("🏛️ Cud Świata rozświetla mgłę i ujawnia bezpieczną krainę!", "🏛️");
     }
   }
 
-  // --- Dynamic Autonomous Unit Movement on Open Fields ---
-  updateWanderingUnits(dt, now) {
-    const openTiles = [];
-    for (let y = 0; y < this.gridHeight; y++) {
-      for (let x = 0; x < this.gridWidth; x++) {
-        const t = this.grid[y][x];
-        if (!t.covered && t.terrain !== 'water' && !t.crater) {
-          openTiles.push({ x, y, road: t.road, building: t.building });
-        }
-      }
-    }
-    if (openTiles.length === 0) return;
+  // --- Animation & Movement Loop ---
+  gameLoop(timestamp) {
+    const dt = (timestamp - this.lastFrameTime) / 1000;
+    this.lastFrameTime = timestamp;
 
-    // Perimeter tiles adjacent to fog of war (for Sappers)
-    const frontierTiles = [];
-    for (const t of openTiles) {
-      let isEdge = false;
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          const nx = t.x + dx;
-          const ny = t.y + dy;
-          if (this.isValidTile(nx, ny) && this.grid[ny][nx].covered) {
-            isEdge = true;
-            break;
-          }
-        }
-        if (isEdge) break;
-      }
-      if (isEdge) frontierTiles.push(t);
-    }
-
-    const moveEntity = (u, speed, pool) => {
-      const targetPool = (pool && pool.length > 0) ? pool : openTiles;
-      if (!u.targetX || (Math.hypot(u.targetX - u.x, u.targetY - u.y) < 6)) {
-        if (!u.waitTimer) u.waitTimer = now + 1500 + Math.random() * 3000;
-        if (now > u.waitTimer) {
-          const dest = targetPool[Math.floor(Math.random() * targetPool.length)];
-          u.targetX = dest.x * this.tileSize + 8 + Math.random() * 20;
-          u.targetY = dest.y * this.tileSize + 8 + Math.random() * 20;
-          u.waitTimer = null;
-        }
-      } else {
-        const dx = u.targetX - u.x;
-        const dy = u.targetY - u.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist > 2) {
-          u.x += (dx / dist) * speed * dt;
-          u.y += (dy / dist) * speed * dt;
-          u.walkAnim = (u.walkAnim || 0) + dt * 10;
-          u.facing = dx >= 0 ? 1 : -1;
-        }
-      }
-    };
-
-    // Workers wander across fields
-    this.workers.forEach(w => moveEntity(w, 36, openTiles));
-
-    // Sappers patrol the frontier perimeter
-    this.sappersList.forEach(s => moveEntity(s, 32, frontierTiles.length > 0 ? frontierTiles : openTiles));
-
-    // Soldiers patrol or charge monsters
-    this.soldiers.forEach(s => {
-      let enemy = this.goblins[0] || (this.dragons.length > 0 ? this.dragons[0] : null);
-      if (enemy) {
-        s.targetX = enemy.x;
-        s.targetY = enemy.y;
-        const dx = enemy.x - s.x;
-        const dy = enemy.y - s.y;
-        const dist = Math.hypot(dx, dy);
-        if (dist < 28) {
-          if (!s.lastAttack || now - s.lastAttack > 800) {
-            s.lastAttack = now;
-            enemy.hp -= 20;
-            this.createExplosion(enemy.x, enemy.y);
-            sfx.playArrow();
-          }
-        } else {
-          s.x += (dx / dist) * 60 * dt;
-          s.y += (dy / dist) * 60 * dt;
-          s.facing = dx >= 0 ? 1 : -1;
-        }
-      } else {
-        moveEntity(s, 42, openTiles);
-      }
-    });
-
-    // Native Warriors attack dragons or patrol
-    this.natives.forEach(n => {
-      let enemy = this.dragons[0] || this.goblins[0];
-      if (enemy && Math.hypot(enemy.x - n.x, enemy.y - n.y) < 220) {
-        if (!n.lastAttack || now - n.lastAttack > 1100) {
-          n.lastAttack = now;
-          this.projectiles.push({
-            x: n.x,
-            y: n.y,
-            target: enemy,
-            speed: 320,
-            damage: 25
-          });
-          sfx.playArrow();
-        }
-      } else {
-        moveEntity(n, 38, openTiles);
-      }
-    });
-
-    // Settlers pave roads
-    this.settlers.forEach(st => {
-      moveEntity(st, 32, openTiles);
-      const tx = Math.floor(st.x / this.tileSize);
-      const ty = Math.floor(st.y / this.tileSize);
-      if (this.isValidTile(tx, ty) && !this.grid[ty][tx].covered && !this.grid[ty][tx].road && this.grid[ty][tx].terrain === 'grass') {
-        if (Math.random() < 0.05) {
-          this.grid[ty][tx].road = true;
-        }
-      }
-    });
-  }
-
-  // --- Main Animation & Physics Loop ---
-  gameLoop(currentTime) {
-    const dt = (currentTime - this.lastFrameTime) / 1000;
-    this.lastFrameTime = currentTime;
-
-    this.updateEntities(dt, currentTime);
+    this.updateEntities(dt);
     this.render();
-
     requestAnimationFrame((t) => this.gameLoop(t));
   }
 
-  updateEntities(dt, now) {
-    if (this.isGameOver) return;
+  updateEntities(dt) {
+    // Sapper movement to dig site
+    const speed = (this.activeHeroPerk === 'hermes_boots' ? 140 : 80);
 
-    // Autonomous wandering of all living people
-    this.updateWanderingUnits(dt, now);
+    this.sappersList.forEach(s => {
+      if (s.state === 'walking_to_dig' && s.digTile) {
+        const dx = s.targetX - s.x;
+        const dy = s.targetY - s.y;
+        const dist = Math.hypot(dx, dy);
 
-    // Watchtowers fire arrows
-    const doubleDmg = this.techsUnlocked.includes('ballista');
-    for (let y = 0; y < this.gridHeight; y++) {
-      for (let x = 0; x < this.gridWidth; x++) {
-        const b = this.grid[y][x].building;
-        if (b && b.type === 'watchtower' && now - b.lastActionTime > 1400) {
-          const towerPx = x * this.tileSize + 20;
-          const towerPy = y * this.tileSize + 20;
-
-          let target = this.dragons[0];
-          let isDragon = true;
-          if (!target && this.goblins.length > 0) {
-            target = this.goblins[0];
-            isDragon = false;
-          }
-
-          if (target) {
-            const dist = Math.hypot(target.x - towerPx, target.y - towerPy);
-            if (dist < 240) {
-              b.lastActionTime = now;
-              this.projectiles.push({
-                x: towerPx,
-                y: towerPy,
-                target: target,
-                speed: 340,
-                damage: (doubleDmg && isDragon) ? 45 : 22
-              });
-              sfx.playArrow();
-            }
-          }
+        if (dist > 4) {
+          s.x += (dx / dist) * speed * dt;
+          s.y += (dy / dist) * speed * dt;
+          s.walkAnim = (s.walkAnim || 0) + dt * 10;
+          s.facing = dx < 0 ? -1 : 1;
+        } else {
+          // Arrived! Dig now!
+          s.state = 'digging';
+          this.executeSapperDigAt(s, s.digTile.tx, s.digTile.ty);
         }
       }
+    });
+
+    // Floating text particles
+    for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+      const ft = this.floatingTexts[i];
+      ft.y -= dt * 25;
+      ft.life -= dt;
+      if (ft.life <= 0) this.floatingTexts.splice(i, 1);
     }
 
-    // Projectiles flying
-    for (let i = this.projectiles.length - 1; i >= 0; i--) {
-      const p = this.projectiles[i];
-      const dx = p.target.x - p.x;
-      const dy = p.target.y - p.y;
-      const dist = Math.hypot(dx, dy);
-
-      if (dist < 14) {
-        p.target.hp -= p.damage;
-        this.createExplosion(p.x, p.y);
-        this.projectiles.splice(i, 1);
-      } else {
-        p.x += (dx / dist) * p.speed * dt;
-        p.y += (dy / dist) * p.speed * dt;
-      }
-    }
-
-    // Catapult boulders
-    for (let i = this.catapultStones.length - 1; i >= 0; i--) {
-      const s = this.catapultStones[i];
-      const dx = s.targetX - s.x;
-      const dy = s.targetY - s.y;
-      const dist = Math.hypot(dx, dy);
-
-      if (dist < 12) {
-        this.catapultStones.splice(i, 1);
-        const tile = this.grid[s.tileY][s.tileX];
-        tile.danger = false;
-        tile.crater = true;
-        tile.covered = false;
-        this.createExplosion(s.targetX, s.targetY);
-        this.notify("💣 Pocisk katapulty zneutralizował cel!", "💣");
-        this.recalculateAdjacentNumbers();
-      } else {
-        s.x += (dx / dist) * s.speed * dt;
-        s.y += (dy / dist) * s.speed * dt;
-      }
-    }
-
-    // Falcons
-    for (let i = this.falcons.length - 1; i >= 0; i--) {
-      const f = this.falcons[i];
-      const dx = f.targetX - f.x;
-      const dy = f.targetY - f.y;
-      const dist = Math.hypot(dx, dy);
-      if (dist < 16) {
-        this.falcons.splice(i, 1);
-      } else {
-        f.x += (dx / dist) * f.speed * dt;
-        f.y += (dy / dist) * f.speed * dt;
-      }
-    }
-
-    // Dragon flight & Fire breath
-    for (let i = this.dragons.length - 1; i >= 0; i--) {
-      const dragon = this.dragons[i];
-      if (dragon.hp <= 0) {
-        this.createExplosion(dragon.x, dragon.y);
-        this.dragons.splice(i, 1);
-        this.dragonsSlain++;
-        this.royalSeals += 2;
-        this.resources += 200;
-        localStorage.setItem('ks_seals', this.royalSeals);
-        sfx.playVictory();
-        this.notify(t('dragonSlain'), '🏆');
-        this.checkVictoryCondition();
-        continue;
-      }
-
-      const keepX = Math.floor(this.gridWidth / 2) * this.tileSize;
-      const keepY = Math.floor(this.gridHeight / 2) * this.tileSize;
-      const distToKeep = Math.hypot(keepX - dragon.x, keepY - dragon.y);
-
-      if (distToKeep > 90) {
-        dragon.x += ((keepX - dragon.x) / distToKeep) * 45 * dt;
-        dragon.y += ((keepY - dragon.y) / distToKeep) * 45 * dt;
-      }
-
-      if (now - dragon.lastAttack > 2200) {
-        dragon.lastAttack = now;
-        sfx.playFireBreath();
-
-        const targetX = keepX + (Math.random() - 0.5) * 70;
-        const targetY = keepY + (Math.random() - 0.5) * 70;
-        for (let p = 0; p < 15; p++) {
-          this.particles.push({
-            x: dragon.x + 25,
-            y: dragon.y + 15,
-            vx: (targetX - dragon.x) * 0.02 + (Math.random() - 0.5) * 2,
-            vy: (targetY - dragon.y) * 0.02 + (Math.random() - 0.5) * 2,
-            life: 0.8,
-            color: '#ff3d00',
-            size: Math.random() * 6 + 3
-          });
-        }
-
-        const btx = Math.floor(targetX / this.tileSize);
-        const bty = Math.floor(targetY / this.tileSize);
-        if (this.isValidTile(btx, bty) && this.grid[bty][btx].building) {
-          const b = this.grid[bty][btx].building;
-          b.hp -= 40;
-          this.grid[bty][btx].burnt = true;
-          if (b.hp <= 0) {
-            if (b.type === 'keep') {
-              this.triggerDefeat();
-            }
-            this.grid[bty][btx].building = null;
-            this.notify(t('buildingDestroyed'), '🔥');
-          }
-        }
-      }
-    }
-
-    // Particles
+    // Explosion particles
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.x += p.vx;
       p.y += p.vy;
       p.life -= dt;
-      if (p.life <= 0) {
-        this.particles.splice(i, 1);
-      }
+      if (p.life <= 0) this.particles.splice(i, 1);
     }
   }
 
-  // --- Rendering Graphics ---
+  // --- Rendering: Canvas & Minimap ---
   render() {
+    this.resizeCanvas();
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
     this.ctx.save();
@@ -1483,61 +1172,69 @@ class KeepsweeperGame {
           if (tile.oracleFlag) {
             this.ctx.drawImage(Sprites.cache.golden_flag, px, py);
           } else if (tile.flagged) {
-            this.ctx.drawImage(Sprites.cache.flag, px, py);
+            this.ctx.drawImage(this.engineMode === 'classic' ? Sprites.cache.classic_flag : Sprites.cache.flag, px, py);
           } else {
-            this.ctx.drawImage(Sprites.cache.covered, px, py);
+            this.ctx.drawImage(this.engineMode === 'classic' ? Sprites.cache.classic_covered : Sprites.cache.covered, px, py);
+          }
+
+          // Show targeted dig marker
+          if (tile.digOrdered) {
+            this.ctx.fillStyle = 'rgba(255, 235, 59, 0.4)';
+            this.ctx.fillRect(px, py, this.tileSize, this.tileSize);
+            this.ctx.font = '14px sans-serif';
+            this.ctx.fillText('⛏️', px + 12, py + 24);
           }
         } else {
-          // Terrain
+          // Uncovered Tile
           if (tile.crater) {
             this.ctx.drawImage(Sprites.cache.crater, px, py);
-          } else if (tile.terrain === 'water') {
-            this.ctx.drawImage(Sprites.cache.water, px, py);
+          } else if (tile.terrain === 'water' || tile.terrain === 'sea') {
+            this.ctx.drawImage(tile.terrain === 'sea' ? Sprites.cache.sea : Sprites.cache.water, px, py);
+          } else if (tile.terrain === 'lake') {
+            this.ctx.drawImage(Sprites.cache.lake, px, py);
           } else if (tile.terrain === 'trees') {
             this.ctx.drawImage(Sprites.cache.trees, px, py);
           } else {
-            if (tile.road) {
-              this.ctx.drawImage(Sprites.cache.road, px, py);
-            } else {
-              this.ctx.drawImage(Sprites.cache.grass, px, py);
-            }
+            this.ctx.drawImage(this.engineMode === 'classic' ? Sprites.cache.classic_revealed : Sprites.cache.grass, px, py);
           }
 
-          if (tile.burnt) {
-            this.ctx.fillStyle = 'rgba(62, 39, 35, 0.4)';
-            this.ctx.fillRect(px, py, this.tileSize, this.tileSize);
-          }
-
-          // Special Tiles
-          if (tile.dangerType === 'goblin_portal') {
-            this.ctx.drawImage(Sprites.cache.portal, px, py);
+          // Special Features
+          if (tile.dangerType === 'dragon_nest') {
+            this.ctx.drawImage(Sprites.cache.dragon_cave, px, py);
           } else if (tile.dangerType === 'chest') {
             this.ctx.drawImage(Sprites.cache.chest, px, py);
           } else if (tile.dangerType === 'wigwam') {
             this.ctx.drawImage(Sprites.cache.wigwam, px, py);
           }
 
-          // Buildings
+          // Buildings & Settlements
           if (tile.building) {
-            const bSprite = Sprites.cache[tile.building.type];
-            if (bSprite) {
-              this.ctx.drawImage(bSprite, px, py);
-            }
-            if (tile.building.hp < tile.building.maxHp) {
-              const hpPct = Math.max(0, tile.building.hp / tile.building.maxHp);
-              this.ctx.fillStyle = '#d32f2f';
-              this.ctx.fillRect(px + 4, py + 2, 32, 4);
-              this.ctx.fillStyle = '#4caf50';
-              this.ctx.fillRect(px + 4, py + 2, 32 * hpPct, 4);
+            if (tile.building.type === 'keep') {
+              // Evolving settlement sprite based on tier
+              const tierSprite = this.uncoveredCount >= 65 ? Sprites.cache.settlement_citadel :
+                                (this.uncoveredCount >= 35 ? Sprites.cache.settlement_township :
+                                (this.uncoveredCount >= 15 ? Sprites.cache.settlement_hamlet : Sprites.cache.settlement_camp));
+              this.ctx.drawImage(tierSprite, px, py);
+            } else {
+              const bSprite = Sprites.cache[tile.building.type];
+              if (bSprite) this.ctx.drawImage(bSprite, px, py);
             }
           } else if (tile.adjacentDangers > 0 && !tile.danger && !tile.crater) {
+            // Render Minesweeper Number with Exact Original Colors
             this.renderMinesweeperNumber(tile.adjacentDangers, px, py);
           }
+        }
+
+        // Grid lines if enabled
+        if (this.showGrid) {
+          this.ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+          this.ctx.lineWidth = 1;
+          this.ctx.strokeRect(px, py, this.tileSize, this.tileSize);
         }
       }
     }
 
-    // 2. Draw Living Characters (with smooth step bobbing & facing direction)
+    // 2. Draw Living Characters
     const drawChar = (sprite, u) => {
       const bob = Math.sin((u.walkAnim || 0)) * 2;
       this.ctx.save();
@@ -1549,524 +1246,680 @@ class KeepsweeperGame {
 
     this.workers.forEach(w => drawChar(Sprites.cache.worker, w));
     this.sappersList.forEach(s => drawChar(Sprites.cache.sapper, s));
-    this.soldiers.forEach(s => drawChar(Sprites.cache.soldier, s));
-    this.settlers.forEach(st => drawChar(Sprites.cache.settler, st));
-    this.natives.forEach(n => drawChar(Sprites.cache.native, n));
-    this.goblins.forEach(g => drawChar(Sprites.cache.goblin, g));
 
-    // 3. Projectiles
-    this.ctx.strokeStyle = '#4e342e';
-    this.ctx.lineWidth = 2;
-    this.projectiles.forEach(p => {
-      this.ctx.beginPath();
-      this.ctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
-      this.ctx.fillStyle = '#ffeb3b';
-      this.ctx.fill();
+    // Floating text indicators
+    this.floatingTexts.forEach(ft => {
+      this.ctx.font = 'bold 12px "Montserrat", sans-serif';
+      this.ctx.fillStyle = ft.color;
+      this.ctx.shadowColor = '#000';
+      this.ctx.shadowBlur = 4;
+      this.ctx.fillText(ft.text, ft.x, ft.y);
+      this.ctx.shadowBlur = 0;
     });
-
-    this.catapultStones.forEach(s => {
-      this.ctx.fillStyle = '#424242';
-      this.ctx.beginPath();
-      this.ctx.arc(s.x, s.y, 7, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.fillStyle = '#ff5722';
-      this.ctx.beginPath();
-      this.ctx.arc(s.x + 2, s.y - 2, 4, 0, Math.PI * 2);
-      this.ctx.fill();
-    });
-
-    this.falcons.forEach(f => {
-      this.ctx.drawImage(Sprites.cache.falcon, f.x, f.y);
-    });
-
-    // 4. Dragon & Boss HP Bar
-    this.dragons.forEach(d => {
-      this.ctx.drawImage(Sprites.cache.dragon, d.x - 36, d.y - 36);
-      this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-      this.ctx.fillRect(d.x - 28, d.y - 42, 56, 7);
-      this.ctx.fillStyle = '#f44336';
-      this.ctx.fillRect(d.x - 27, d.y - 41, 54 * (d.hp / d.maxHp), 5);
-    });
-
-    // 5. Fire Particles
-    this.particles.forEach(p => {
-      this.ctx.fillStyle = p.color;
-      this.ctx.beginPath();
-      this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      this.ctx.fill();
-    });
-
-    // 6. Build Ghost Cursor
-    if (this.selectedBuildingType && this.hoverTile) {
-      const gpx = this.hoverTile.x * this.tileSize;
-      const gpy = this.hoverTile.y * this.tileSize;
-      this.ctx.fillStyle = 'rgba(76, 175, 80, 0.4)';
-      this.ctx.fillRect(gpx, gpy, this.tileSize, this.tileSize);
-      const ghostSprite = Sprites.cache[this.selectedBuildingType];
-      if (ghostSprite) {
-        this.ctx.globalAlpha = 0.6;
-        this.ctx.drawImage(ghostSprite, gpx, gpy);
-        this.ctx.globalAlpha = 1.0;
-      }
-    }
-
-    // 7. Active Power Target Reticle
-    if (this.activePower && this.hoverTile) {
-      const gpx = this.hoverTile.x * this.tileSize;
-      const gpy = this.hoverTile.y * this.tileSize;
-      this.ctx.strokeStyle = '#ffd700';
-      this.ctx.lineWidth = 3;
-      this.ctx.strokeRect(gpx + 2, gpy + 2, this.tileSize - 4, this.tileSize - 4);
-    }
 
     this.ctx.restore();
   }
 
+  // Exact Original Windows 95 Saper Colors
   renderMinesweeperNumber(num, px, py) {
-    const colors = [
+    const classicColors = [
       '',
-      '#0000ff', // 1: Blue
-      '#008000', // 2: Green
-      '#ff0000', // 3: Red
-      '#000080', // 4: Dark Navy
-      '#800000', // 5: Maroon
-      '#008080', // 6: Teal
-      '#000000', // 7: Black
-      '#808080'  // 8: Gray
+      '#0000ff', // 1: Pure Blue
+      '#008000', // 2: Dark Green
+      '#ff0000', // 3: Pure Red
+      '#000080', // 4: Navy Blue
+      '#800000', // 5: Maroon Red
+      '#008080', // 6: Teal Cyan
+      '#000000', // 7: Pure Black
+      '#808080'  // 8: Solid Gray
     ];
-    this.ctx.font = 'bold 20px "Courier New", monospace';
-    this.ctx.fillStyle = colors[num] || '#000';
+
+    this.ctx.font = 'bold 22px "Courier New", monospace';
+    this.ctx.fillStyle = classicColors[num] || '#000';
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
     this.ctx.fillText(num.toString(), px + this.tileSize / 2, py + this.tileSize / 2 + 1);
   }
 
-  // --- Victory / Defeat Conditions ---
+  // --- Minimap Radar Rendering ---
+  renderMinimap() {
+    if (!this.minimapCtx) return;
+    const mw = this.minimapCanvas.width;
+    const mh = this.minimapCanvas.height;
+    this.minimapCtx.clearRect(0, 0, mw, mh);
+
+    const cellW = mw / this.gridWidth;
+    const cellH = mh / this.gridHeight;
+
+    for (let y = 0; y < this.gridHeight; y++) {
+      for (let x = 0; x < this.gridWidth; x++) {
+        const t = this.grid[y][x];
+        if (t.covered) {
+          this.minimapCtx.fillStyle = t.flagged ? '#d50000' : '#455a64';
+        } else {
+          if (t.terrain === 'water' || t.terrain === 'sea') this.minimapCtx.fillStyle = '#0277bd';
+          else if (t.terrain === 'lake') this.minimapCtx.fillStyle = '#00acc1';
+          else if (t.terrain === 'trees') this.minimapCtx.fillStyle = '#1b5e20';
+          else this.minimapCtx.fillStyle = '#8bc34a';
+
+          if (t.building) this.minimapCtx.fillStyle = '#ffd600';
+        }
+        this.minimapCtx.fillRect(x * cellW, y * cellH, cellW, cellH);
+      }
+    }
+
+    // Camera view rectangle on minimap
+    const viewWorldX = (-this.camX / this.zoom);
+    const viewWorldY = (-this.camY / this.zoom);
+    const viewWorldW = (this.canvas.width / this.zoom);
+    const viewWorldH = (this.canvas.height / this.zoom);
+
+    const totalWorldW = this.gridWidth * this.tileSize;
+    const totalWorldH = this.gridHeight * this.tileSize;
+
+    const rx = (viewWorldX / totalWorldW) * mw;
+    const ry = (viewWorldY / totalWorldH) * mh;
+    const rw = (viewWorldW / totalWorldW) * mw;
+    const rh = (viewWorldH / totalWorldH) * mh;
+
+    this.minimapCtx.strokeStyle = '#ffeb3b';
+    this.minimapCtx.lineWidth = 1.5;
+    this.minimapCtx.strokeRect(rx, ry, rw, rh);
+  }
+
+  addFloatingText(text, x, y, color = '#ffd700') {
+    this.floatingTexts.push({ text, x, y, color, life: 1.2 });
+  }
+
+  createDirtSparks(x, y) {
+    for (let i = 0; i < 6; i++) {
+      this.particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 3,
+        vy: (Math.random() - 0.5) * 3,
+        life: 0.4
+      });
+    }
+  }
+
+  createExplosion(x, y) {
+    for (let i = 0; i < 20; i++) {
+      this.particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 8,
+        vy: (Math.random() - 0.5) * 8,
+        life: 0.6
+      });
+    }
+  }
+
+  // --- UI Update & Synchronization ---
+  updateUI() {
+    const resEl = document.getElementById('resCounter');
+    if (resEl) resEl.textContent = this.resources.toString().padStart(4, '0');
+
+    const skuchyEl = document.getElementById('skuchyCounter');
+    if (skuchyEl) skuchyEl.textContent = this.blundersCount.toString();
+
+    const timerEl = document.getElementById('levelTimer');
+    if (timerEl) {
+      const mins = Math.floor(this.elapsedSeconds / 60).toString().padStart(2, '0');
+      const secs = (this.elapsedSeconds % 60).toString().padStart(2, '0');
+      timerEl.textContent = `${mins}:${secs}`;
+    }
+
+    const sappersEl = document.getElementById('sappersCount');
+    if (sappersEl) sappersEl.textContent = `${this.sappers}/${this.sappersMax}`;
+
+    const uncoveredEl = document.getElementById('uncoveredCounter');
+    if (uncoveredEl) uncoveredEl.textContent = this.uncoveredCount.toString().padStart(3, '0');
+
+    const sealsEl = document.getElementById('sealsDisplay');
+    if (sealsEl) sealsEl.textContent = this.royalSeals.toString();
+
+    const heroBadge = document.getElementById('heroBadge');
+    if (heroBadge) {
+      const p = this.heroPerks.find(x => x.id === this.activeHeroPerk);
+      if (p) {
+        heroBadge.innerHTML = `<span>${p.icon}</span><span>${p.name}</span>`;
+      }
+    }
+  }
+
+  // --- End of Game & Match History Streak Recording ---
   checkVictoryCondition() {
     if (this.isGameOver) return;
 
-    let won = false;
-
-    if (this.mode === 'dragon') {
-      if (this.dragonsSlain >= this.dragonsTarget) won = true;
-    } else if (this.mode === 'reclaim') {
-      let uncovered = 0;
-      for (let y = 0; y < this.gridHeight; y++) {
-        for (let x = 0; x < this.gridWidth; x++) {
-          if (!this.grid[y][x].covered) uncovered++;
-        }
-      }
-      if (uncovered >= this.uncoveredTarget) won = true;
-    } else if (this.mode === 'treasury') {
-      if (this.chestsCollected >= this.chestsTarget) won = true;
-    }
-
-    if (won) {
-      this.triggerVictory();
+    if (this.uncoveredCount >= this.uncoveredTarget) {
+      this.recordMatchOutcome(true);
+    } else if (this.sappers <= 0) {
+      this.recordMatchOutcome(false);
     }
   }
 
-  triggerVictory() {
+  recordMatchOutcome(won) {
     this.isGameOver = true;
-    this.isVictory = true;
     sfx.playVictory();
-
-    const sealsEarned = 2 + Math.floor(this.level / 4);
-    this.royalSeals += sealsEarned;
-    localStorage.setItem('ks_seals', this.royalSeals);
-
-    if (this.level >= (this.progress[this.mode] || 1)) {
-      this.progress[this.mode] = Math.min(20, this.level + 1);
-      localStorage.setItem('ks_prog', JSON.stringify(this.progress));
-    }
-
-    document.getElementById('endgameTitle').textContent = t('victoryTitle');
-    document.getElementById('endgameTitle').style.color = '#2e7d32';
-    document.getElementById('endgameDesc').textContent = t('victoryDesc');
-    document.getElementById('rewardSeals').textContent = `+${sealsEarned} 👑`;
-    document.getElementById('modalGameOver').style.display = 'flex';
-  }
-
-  triggerDefeat() {
-    this.isGameOver = true;
-    this.isVictory = false;
-    sfx.playDefeat();
-
-    document.getElementById('endgameTitle').textContent = t('defeatTitle');
-    document.getElementById('endgameTitle').style.color = '#c62828';
-    document.getElementById('endgameDesc').textContent = t('defeatDesc');
-    document.getElementById('rewardSeals').textContent = `0 👑`;
-    document.getElementById('modalGameOver').style.display = 'flex';
-  }
-
-  notify(msg, icon = '📢') {
-    const ticker = document.getElementById('eventTicker');
-    document.getElementById('tickerIcon').textContent = icon;
-    document.getElementById('tickerText').textContent = msg;
-    ticker.style.display = 'flex';
-    clearTimeout(this.tickerTimer);
-    this.tickerTimer = setTimeout(() => {
-      ticker.style.display = 'none';
-    }, 4500);
-  }
-
-  updateUI() {
-    document.getElementById('resCounter').textContent = this.formatLED(this.resources);
-
-    let uncoveredCount = 0;
-    for (let y = 0; y < this.gridHeight; y++) {
-      for (let x = 0; x < this.gridWidth; x++) {
-        if (!this.grid[y][x].covered) uncoveredCount++;
-      }
-    }
-    document.getElementById('uncoveredCounter').textContent = this.formatLED(uncoveredCount);
 
     const mins = Math.floor(this.elapsedSeconds / 60).toString().padStart(2, '0');
     const secs = (this.elapsedSeconds % 60).toString().padStart(2, '0');
-    document.getElementById('levelTimer').textContent = `${mins}:${secs}`;
+    const timeStr = `${mins}:${secs}`;
 
-    document.getElementById('workersCount').textContent = `${this.workersIdle}/${this.workersTotal}`;
-    document.getElementById('soldiersCount').textContent = `${this.soldiersTotal}/${this.soldiersMax}`;
-    document.getElementById('sappersCount').textContent = `${this.sappers}/${this.sappersMax}`;
-    document.getElementById('shieldIndicator').style.display = this.hasBlastShield ? 'flex' : 'none';
+    const matchRecord = {
+      id: Date.now(),
+      commander: this.activeCommander,
+      date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      mode: this.mode,
+      level: this.level,
+      won: won,
+      time: timeStr,
+      seconds: this.elapsedSeconds,
+      blunders: this.blundersCount,
+      gold: this.resources
+    };
 
-    document.getElementById('menuSealsBadge').textContent = this.royalSeals;
-    document.getElementById('researchSealsCount').textContent = this.royalSeals;
+    this.matchHistory.unshift(matchRecord);
+    if (this.matchHistory.length > 50) this.matchHistory.pop();
+    localStorage.setItem('ks_match_history', JSON.stringify(this.matchHistory));
 
-    ['oracle', 'falcon', 'shield', 'bombard', 'probe'].forEach(p => {
-      const cdEl = document.getElementById('cd' + p.charAt(0).toUpperCase() + p.slice(1));
-      const card = document.getElementById('powerCard' + p.charAt(0).toUpperCase() + p.slice(1));
-      if (cdEl && card) {
-        if (this.powerCooldowns[p] > 0) {
-          cdEl.textContent = this.powerCooldowns[p] + 's';
-          card.classList.add('cooldown');
-        } else {
-          cdEl.textContent = t('powerReady');
-          card.classList.remove('cooldown');
-        }
-      }
+    // Show Game Over Modal
+    const modal = document.getElementById('modalGameOver');
+    if (modal) {
+      const title = document.getElementById('endgameTitle');
+      const desc = document.getElementById('endgameDesc');
+      const timeVal = document.getElementById('endgameTime');
+      const blundersVal = document.getElementById('endgameBlunders');
+      const goldVal = document.getElementById('endgameGold');
+
+      if (title) title.textContent = won ? 'ZWYCIĘSTWO!' : 'PORAŻKA!';
+      if (title) title.style.color = won ? '#2e7d32' : '#c62828';
+      if (desc) desc.textContent = won ? 'Nowy Świat został bezpiecznie zbadany i skolonizowany!' : 'Wszyscy saperzy polegli na polu minowym...';
+      if (timeVal) timeVal.textContent = timeStr;
+      if (blundersVal) blundersVal.textContent = `${this.blundersCount} 💥`;
+      if (goldVal) goldVal.textContent = `+${this.resources} 💰`;
+
+      modal.style.display = 'flex';
+    }
+  }
+
+  // --- Match History Chart Canvas ("Pasmo ostatnich meczy") ---
+  renderMatchHistoryChart(commander) {
+    const chartCanvas = document.getElementById('matchHistoryChart');
+    if (!chartCanvas) return;
+    const ctx = chartCanvas.getContext('2d');
+    const w = chartCanvas.width;
+    const h = chartCanvas.height;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#263238';
+    ctx.fillRect(0, 0, w, h);
+
+    // Filter by commander
+    const list = this.matchHistory.filter(m => m.commander === commander).slice(0, 16).reverse();
+
+    if (list.length === 0) {
+      ctx.fillStyle = '#fff';
+      ctx.font = '12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Brak rozegranych meczów dla tego dowódcy. Rozpocznij grę!', w / 2, h / 2);
+      return;
+    }
+
+    // Grid lines
+    ctx.strokeStyle = '#37474f';
+    ctx.lineWidth = 1;
+    for (let y = 30; y < h - 20; y += 30) {
+      ctx.beginPath();
+      ctx.moveTo(30, y);
+      ctx.lineTo(w - 20, y);
+      ctx.stroke();
+    }
+
+    const barWidth = Math.min(26, (w - 60) / list.length);
+    const gap = 8;
+    const startX = 40;
+
+    // 1. Draw Outcome Bars (Green = Win, Red = Loss)
+    list.forEach((m, idx) => {
+      const x = startX + idx * (barWidth + gap);
+      const barH = m.won ? 90 : 45;
+      const y = h - 30 - barH;
+
+      ctx.fillStyle = m.won ? '#4caf50' : '#f44336';
+      ctx.fillRect(x, y, barWidth, barH);
+      ctx.strokeStyle = '#000';
+      ctx.strokeRect(x, y, barWidth, barH);
+
+      // Label index
+      ctx.fillStyle = '#cfd8dc';
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`#${idx + 1}`, x + barWidth / 2, h - 14);
     });
 
-    const modeKey = this.getModeNameKey();
-    document.getElementById('missionTitle').textContent = `${t(modeKey)} - ${t('levelLabel')} ${this.level}`;
-    if (this.mode === 'dragon') {
-      document.getElementById('missionSub').textContent = `${this.dragonsSlain}/${this.dragonsTarget} ${t('slain')}`;
-    } else if (this.mode === 'reclaim') {
-      document.getElementById('missionSub').textContent = `${uncoveredCount}/${this.uncoveredTarget}`;
-    } else {
-      document.getElementById('missionSub').textContent = `${this.chestsCollected}/${this.chestsTarget}`;
+    // 2. Draw Yellow Blunders Trend Curve ("Krzywa skuch")
+    ctx.strokeStyle = '#ffeb3b';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    list.forEach((m, idx) => {
+      const x = startX + idx * (barWidth + gap) + barWidth / 2;
+      const blundersNorm = Math.min(100, m.blunders * 25);
+      const y = (h - 35) - blundersNorm;
+      if (idx === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // Draw yellow dots for blunders
+    list.forEach((m, idx) => {
+      const x = startX + idx * (barWidth + gap) + barWidth / 2;
+      const blundersNorm = Math.min(100, m.blunders * 25);
+      const y = (h - 35) - blundersNorm;
+      ctx.fillStyle = '#ffd600';
+      ctx.beginPath();
+      ctx.arc(x, y, 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Compute Career Stats
+    const total = list.length;
+    const wins = list.filter(m => m.won).length;
+    const winrate = ((wins / total) * 100).toFixed(1);
+    const avgBlunders = (list.reduce((acc, m) => acc + m.blunders, 0) / total).toFixed(1);
+
+    const totalEl = document.getElementById('statTotalMatches');
+    const winrateEl = document.getElementById('statWinrate');
+    const avgEl = document.getElementById('statAvgBlunders');
+    if (totalEl) totalEl.textContent = total.toString();
+    if (winrateEl) winrateEl.textContent = `${winrate}%`;
+    if (avgEl) avgEl.textContent = avgBlunders.toString();
+
+    // Streak Calculation
+    let streak = 0;
+    for (let i = 0; i < this.matchHistory.length; i++) {
+      if (this.matchHistory[i].won) streak++;
+      else break;
     }
+    const streakBadge = document.getElementById('currentStreakBadge');
+    if (streakBadge) streakBadge.innerHTML = streak > 0 ? `🔥 Pasmo: <b>${streak} zwycięstw z rzędu</b>` : `❄️ Pasmo: <b>Przerwana seria</b>`;
   }
 
-  formatLED(val) {
-    return Math.max(0, Math.min(9999, Math.floor(val))).toString().padStart(4, '0');
-  }
-
-  getModeNameKey() {
-    switch (this.mode) {
-      case 'dragon': return 'questDragonHunt';
-      case 'reclaim': return 'questReclaimRealm';
-      case 'treasury': return 'questRoyalTreasury';
-      case 'siege': return 'questRivalKingdoms';
-      default: return 'questDragonHunt';
-    }
-  }
-
+  // --- Setup UI Handlers (Safe Check on All DOM Elements) ---
   setupUI() {
-    const quickLang = document.getElementById('quickLangSelect');
-    quickLang.value = getLang();
-    quickLang.addEventListener('change', (e) => {
-      setLang(e.target.value);
-      this.updateUI();
-    });
+    const bindClick = (id, fn) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('click', fn);
+    };
 
-    const btnRecruit = document.getElementById('btnQuickRecruitSapper');
-    if (btnRecruit) {
-      btnRecruit.addEventListener('click', () => this.recruitSapper());
+    // Quick Language Selector
+    const quickLang = document.getElementById('quickLangSelect');
+    if (quickLang) {
+      quickLang.value = getLang();
+      quickLang.addEventListener('change', (e) => {
+        setLang(e.target.value);
+        this.updateUI();
+      });
     }
 
-    const btnBuild = document.getElementById('btnBuildToggle');
-    const palette = document.getElementById('buildPalette');
-    btnBuild.addEventListener('click', () => {
-      const show = palette.style.display !== 'flex';
-      palette.style.display = show ? 'flex' : 'none';
-      btnBuild.classList.toggle('active', show);
-      if (show) {
-        document.getElementById('powersPalette').style.display = 'none';
-        document.getElementById('btnPowersToggle').classList.remove('active');
-        this.activePower = null;
-      } else {
-        this.selectedBuildingType = null;
-      }
+    // Sound Toggle Button in Header
+    bindClick('btnSoundHeader', () => {
+      sfx.muted = !sfx.muted;
+      const btn = document.getElementById('btnSoundHeader');
+      if (btn) btn.textContent = sfx.muted ? '🔇' : '🔊';
     });
 
-    document.getElementById('btnClosePalette').addEventListener('click', () => {
-      palette.style.display = 'none';
-      btnBuild.classList.remove('active', false);
+    // Dual-Engine Switcher
+    bindClick('btnEngineSwitch', () => {
+      this.toggleDualEngine();
+    });
+    bindClick('menuModeSwitch', () => {
+      this.toggleDualEngine();
+    });
+
+    // Quick recruit sapper
+    bindClick('btnQuickRecruitSapper', () => this.recruitSapper());
+
+    // Action Bar Buttons
+    bindClick('btnCenterMap', () => this.centerCamera());
+    bindClick('btnToggleFlagMode', () => {
+      this.flagMode = !this.flagMode;
+      const flagLabel = document.getElementById('flagModeLabel');
+      if (flagLabel) flagLabel.textContent = this.flagMode ? 'Flaga (ON)' : 'Flaga';
+    });
+
+    // Palettes Toggle
+    const buildPalette = document.getElementById('buildPalette');
+    const powersPalette = document.getElementById('powersPalette');
+
+    bindClick('btnBuildToggle', () => {
+      if (!buildPalette) return;
+      const show = buildPalette.style.display !== 'flex';
+      buildPalette.style.display = show ? 'flex' : 'none';
+      if (powersPalette) powersPalette.style.display = 'none';
+    });
+
+    bindClick('btnClosePalette', () => {
+      if (buildPalette) buildPalette.style.display = 'none';
       this.selectedBuildingType = null;
     });
 
-    document.querySelectorAll('.build-card').forEach(card => {
-      card.addEventListener('click', () => {
-        document.querySelectorAll('.build-card').forEach(c => c.classList.remove('selected'));
-        card.classList.add('selected');
-        this.selectedBuildingType = card.getAttribute('data-build');
-      });
-    });
-
-    const btnPowers = document.getElementById('btnPowersToggle');
-    const powersPalette = document.getElementById('powersPalette');
-    btnPowers.addEventListener('click', () => {
+    bindClick('btnPowersToggle', () => {
+      if (!powersPalette) return;
       const show = powersPalette.style.display !== 'flex';
       powersPalette.style.display = show ? 'flex' : 'none';
-      btnPowers.classList.toggle('active', show);
-      if (show) {
-        palette.style.display = 'none';
-        btnBuild.classList.remove('active');
-        this.selectedBuildingType = null;
-      } else {
-        this.activePower = null;
-      }
+      if (buildPalette) buildPalette.style.display = 'none';
     });
 
-    document.getElementById('btnClosePowers').addEventListener('click', () => {
-      powersPalette.style.display = 'none';
-      btnPowers.classList.remove('active');
+    bindClick('btnClosePowers', () => {
+      if (powersPalette) powersPalette.style.display = 'none';
       this.activePower = null;
     });
 
-    document.querySelectorAll('.power-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const pKey = card.getAttribute('data-power');
-        this.activatePower(pKey);
-      });
+    // Modals Open Buttons
+    bindClick('menuTrade', () => this.openTradeModal());
+    bindClick('btnTradeToggle', () => this.openTradeModal());
+    bindClick('btnLeftTrade', () => this.openTradeModal());
+
+    bindClick('menuSuperhero', () => this.openSuperheroModal());
+    bindClick('btnHeroToggle', () => this.openSuperheroModal());
+    bindClick('btnLeftSuperhero', () => this.openSuperheroModal());
+    bindClick('heroBadge', () => this.openSuperheroModal());
+
+    bindClick('menuLeaderboard', () => this.openLeaderboardModal());
+    bindClick('btnStatsToggle', () => this.openLeaderboardModal());
+    bindClick('btnLeftStats', () => this.openLeaderboardModal());
+
+    bindClick('menuResearch', () => this.openResearchModal());
+    bindClick('btnLeftResearch', () => this.openResearchModal());
+
+    bindClick('menuPlay', () => this.startLevel(this.mode, this.level));
+    bindClick('menuSettings', () => this.openSettingsModal());
+    bindClick('btnHelpToggle', () => this.openHelpModal());
+    bindClick('menuHelp', () => this.openHelpModal());
+
+    bindClick('btnLeftGridToggle', () => {
+      this.showGrid = !this.showGrid;
     });
 
-    const btnFlag = document.getElementById('btnToggleFlagMode');
-    btnFlag.addEventListener('click', () => {
-      this.flagMode = !this.flagMode;
-      btnFlag.classList.toggle('active', this.flagMode);
-      btnFlag.style.background = this.flagMode ? '#ffd54f' : '';
-    });
-
-    document.getElementById('btnZoomIn').addEventListener('click', () => this.setZoom(this.zoom * 1.2));
-    document.getElementById('btnZoomOut').addEventListener('click', () => this.setZoom(this.zoom * 0.8));
-
-    document.getElementById('menuPlay').addEventListener('click', () => this.openQuestsModal());
-    document.getElementById('missionBadge').addEventListener('click', () => this.openQuestsModal());
-
-    document.getElementById('menuResearch').addEventListener('click', () => this.openResearchModal());
-
-    document.getElementById('menuSettings').addEventListener('click', () => {
-      document.getElementById('settingLangSelect').value = getLang();
-      document.getElementById('modalSettings').style.display = 'flex';
-    });
-
-    document.getElementById('settingLangSelect').addEventListener('change', (e) => {
-      setLang(e.target.value);
-      quickLang.value = e.target.value;
-      this.updateUI();
-    });
-
-    document.getElementById('settingSoundToggle').addEventListener('change', (e) => {
-      sfx.setMuted(!e.target.checked);
-    });
-
-    document.getElementById('menuHelp').addEventListener('click', () => {
-      document.getElementById('modalHelp').style.display = 'flex';
-    });
-    document.getElementById('btnHelpToggle').addEventListener('click', () => {
-      document.getElementById('modalHelp').style.display = 'flex';
-    });
-
+    // Modal Close Buttons
     document.querySelectorAll('.modal-close').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
       });
     });
 
-    document.getElementById('btnEndgameAction').addEventListener('click', () => {
-      document.getElementById('modalGameOver').style.display = 'none';
-      if (this.isVictory) {
-        this.openQuestsModal();
-      } else {
-        this.startLevel(this.mode, this.level);
-      }
-    });
+    // Settings Dropdowns Handlers
+    const themeSel = document.getElementById('settingThemeSelect');
+    if (themeSel) {
+      themeSel.addEventListener('change', (e) => {
+        document.body.className = document.body.className.replace(/theme-\w+/g, '') + ` theme-${e.target.value}`;
+        localStorage.setItem('ks_theme', e.target.value);
+      });
+    }
 
-    window.onLanguageChanged = () => {
+    const fontSel = document.getElementById('settingFontSelect');
+    if (fontSel) {
+      fontSel.addEventListener('change', (e) => {
+        document.body.className = document.body.className.replace(/font-\w+/g, '') + ` font-${e.target.value.toLowerCase()}`;
+        localStorage.setItem('ks_font', e.target.value.toLowerCase());
+      });
+    }
+
+    const cursorSel = document.getElementById('settingCursorSelect');
+    if (cursorSel) {
+      cursorSel.addEventListener('change', (e) => {
+        document.body.className = document.body.className.replace(/cursor-\w+/g, '') + ` cursor-${e.target.value}`;
+        localStorage.setItem('ks_cursor', e.target.value);
+      });
+    }
+
+    // Superhero Reroll
+    bindClick('btnRerollHeroPerk', () => {
+      const rand = this.heroPerks[Math.floor(Math.random() * this.heroPerks.length)];
+      this.activeHeroPerk = rand.id;
+      localStorage.setItem('ks_hero_perk', this.activeHeroPerk);
+      this.renderSuperheroGrid();
       this.updateUI();
-      if (document.getElementById('modalResearch').style.display === 'flex') {
-        this.renderResearchGrid();
-      }
-    };
-  }
-
-  // --- Quests & Level Selector ---
-  openQuestsModal() {
-    const modal = document.getElementById('modalQuests');
-    modal.style.display = 'flex';
-
-    document.querySelectorAll('.quest-item').forEach(item => {
-      const qMode = item.getAttribute('data-mode');
-      const maxUnlocked = this.progress[qMode] || 1;
-      const progressLabel = item.querySelector('.quest-progress');
-      if (progressLabel) progressLabel.textContent = `${maxUnlocked}/20 ${t('slain') ? 'ukończono' : 'completed'}`;
-
-      item.onclick = () => {
-        document.querySelectorAll('.quest-item').forEach(i => i.classList.remove('selected'));
-        item.classList.add('selected');
-        this.renderLevelGrid(qMode);
-      };
     });
 
-    this.renderLevelGrid(this.mode);
-  }
-
-  renderLevelGrid(qMode) {
-    const grid = document.getElementById('levelGrid');
-    grid.innerHTML = '';
-    const maxUnlocked = this.progress[qMode] || 1;
-
-    let selectedLevel = Math.min(this.level, maxUnlocked);
-
-    for (let i = 1; i <= 20; i++) {
-      const box = document.createElement('div');
-      box.className = 'level-box';
-      box.textContent = i;
-
-      if (i < maxUnlocked) {
-        box.classList.add('completed');
-        box.innerHTML = `${i} <span style="font-size:9px">⭐</span>`;
-      } else if (i === maxUnlocked) {
-        box.classList.add('available');
-      } else {
-        box.classList.add('locked');
-      }
-
-      if (i === selectedLevel) {
-        box.classList.add('selected');
-      }
-
-      if (i <= maxUnlocked) {
-        box.onclick = () => {
-          document.querySelectorAll('.level-box').forEach(b => b.classList.remove('selected'));
-          box.classList.add('selected');
-          selectedLevel = i;
-          this.updateLevelPreview(qMode, i);
-        };
-      }
-
-      grid.appendChild(box);
+    // Profile Selector in Leaderboard
+    const profileSel = document.getElementById('playerProfileSelect');
+    if (profileSel) {
+      profileSel.value = this.activeCommander;
+      profileSel.addEventListener('change', (e) => {
+        this.activeCommander = e.target.value;
+        localStorage.setItem('ks_commander', this.activeCommander);
+        this.renderMatchHistoryChart(this.activeCommander);
+      });
     }
 
-    this.updateLevelPreview(qMode, selectedLevel);
+    bindClick('btnEndgameShowStats', () => {
+      document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+      this.openLeaderboardModal();
+    });
 
-    document.getElementById('btnStartLevel').onclick = () => {
-      document.getElementById('modalQuests').style.display = 'none';
-      this.startLevel(qMode, selectedLevel);
-    };
+    bindClick('btnEndgameAction', () => {
+      document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none');
+      this.startLevel(this.mode, this.level + 1);
+    });
   }
 
-  updateLevelPreview(qMode, lvl) {
-    const title = document.getElementById('questModalTitle');
-    const desc = document.getElementById('questModalDesc');
+  toggleDualEngine() {
+    this.engineMode = this.engineMode === 'colonization' ? 'classic' : 'colonization';
+    localStorage.setItem('ks_engine', this.engineMode);
 
-    let modeTitleKey = 'questDragonHunt';
-    let goalKey = 'levelGoalDragon';
-    let count = Math.min(5, Math.ceil(lvl / 3));
+    const icon = document.getElementById('engineBadgeIcon');
+    const text = document.getElementById('engineBadgeText');
+    const smileyBar = document.getElementById('classicSmileyBar');
 
-    if (qMode === 'reclaim') {
-      modeTitleKey = 'questReclaimRealm';
-      goalKey = 'levelGoalReclaim';
-      count = 80 + lvl * 25;
-    } else if (qMode === 'treasury') {
-      modeTitleKey = 'questRoyalTreasury';
-      goalKey = 'levelGoalTreasury';
-      count = Math.max(2, Math.floor(lvl / 2));
+    if (this.engineMode === 'classic') {
+      if (icon) icon.textContent = '🕹️';
+      if (text) text.textContent = 'Silnik: Klasyczny Saper Win95';
+      if (smileyBar) smileyBar.style.display = 'flex';
+      this.notify('Przełączono na Klasyczny Saper Windows 95!', '🕹️');
+    } else {
+      if (icon) icon.textContent = '🌲';
+      if (text) text.textContent = 'Silnik: Kolonizacja (Civ)';
+      if (smileyBar) smileyBar.style.display = 'none';
+      this.notify('Przełączono na Silnik Kolonizacji i Cywilizacji!', '🌲');
     }
 
-    title.textContent = `${t(modeTitleKey)} - ${t('levelLabel')} ${lvl}`;
-    desc.textContent = t(goalKey, { count, target: count });
+    this.startLevel(this.mode, this.level);
   }
 
-  // --- Research Tech Tree ---
+  recruitSapper() {
+    const cost = 40;
+    if (this.resources < cost) {
+      this.notify(`Brak zasobów na rekrutację (wymagane: ${cost} 💰)`, '💰');
+      return;
+    }
+    if (this.sappers >= this.sappersMax) {
+      this.notify('Osiągnięto limit korpusu saperskiego!', '⛑️');
+      return;
+    }
+
+    this.resources -= cost;
+    this.sappers++;
+    const kx = this.playerStart ? this.playerStart.x : Math.floor(this.gridWidth / 2);
+    const ky = this.playerStart ? this.playerStart.y : Math.floor(this.gridHeight / 2);
+
+    this.sappersList.push({
+      id: Date.now(),
+      name: `Saper Weteran #${this.sappers}`,
+      x: kx * this.tileSize + 10,
+      y: ky * this.tileSize + 10,
+      targetX: kx * this.tileSize,
+      targetY: ky * this.tileSize,
+      state: 'idle',
+      digTile: null,
+      facing: 1,
+      walkAnim: 0
+    });
+
+    sfx.playRecruit();
+    this.notify(`Zwerbowano nowego Sapera! (Koszt: ${cost} 💰)`, '⛑️');
+    this.updateUI();
+  }
+
+  // --- Modals Renderers ---
+  openTradeModal() {
+    const modal = document.getElementById('modalTrade');
+    if (!modal) return;
+    const grid = document.getElementById('tradeDealsGrid');
+    if (grid) {
+      grid.innerHTML = `
+        <div class="trade-card">
+          <div class="trade-title">👑 Królewskie Pieczęcie</div>
+          <div class="trade-rate">Wymień 100 💰 na 2 👑 Pieczęcie</div>
+          <button class="action-btn" onclick="game.executeTrade('seals')">Wymień (100 💰)</button>
+        </div>
+        <div class="trade-card">
+          <div class="trade-title">⛑️ Kontrakt Saperski</div>
+          <div class="trade-rate">Zaciąg 2 Elitarnych Saperów Królewskich</div>
+          <button class="action-btn" onclick="game.executeTrade('sappers')">Zaciąg (70 💰)</button>
+        </div>
+        <div class="trade-card">
+          <div class="trade-title">🏛️ Cud Świata z Importu</div>
+          <div class="trade-rate">Kup natychmiastowe odkrycie 4 bezpiecznych pól</div>
+          <button class="action-btn" onclick="game.executeTrade('vision')">Zakup (50 💰)</button>
+        </div>
+        <div class="trade-card">
+          <div class="trade-title">🛡️ Importowany Pancerz</div>
+          <div class="trade-rate">Ładunek Pancerza Ochronnego na skuchę</div>
+          <button class="action-btn" onclick="game.executeTrade('armor')">Zakup (60 💰)</button>
+        </div>
+      `;
+    }
+    modal.style.display = 'flex';
+  }
+
+  executeTrade(type) {
+    if (type === 'seals') {
+      if (this.resources < 100) { this.notify('Brak złota na pieczęcie!', '💰'); return; }
+      this.resources -= 100;
+      this.royalSeals += 2;
+      localStorage.setItem('ks_seals', this.royalSeals);
+      this.notify('Zakupiono 2 Królewskie Pieczęcie!', '👑');
+    } else if (type === 'sappers') {
+      if (this.resources < 70) { this.notify('Brak złota na saperów!', '💰'); return; }
+      this.resources -= 70;
+      this.sappers = Math.min(this.sappersMax, this.sappers + 2);
+      this.notify('Zaciągnięto 2 Saperów!', '⛑️');
+    } else if (type === 'vision') {
+      if (this.resources < 50) { this.notify('Brak złota!', '💰'); return; }
+      this.resources -= 50;
+      for (let i = 0; i < 4; i++) this.autoRevealRandomSafeTile();
+    } else if (type === 'armor') {
+      if (this.resources < 60) { this.notify('Brak złota!', '💰'); return; }
+      this.resources -= 60;
+      this.hasBlastShield = true;
+      this.notify('Założono Pancerz Ochronny!', '🛡️');
+    }
+    this.updateUI();
+  }
+
+  openSuperheroModal() {
+    const modal = document.getElementById('modalSuperhero');
+    if (!modal) return;
+    this.renderSuperheroGrid();
+    modal.style.display = 'flex';
+  }
+
+  renderSuperheroGrid() {
+    const grid = document.getElementById('heroPerksGrid');
+    if (!grid) return;
+    grid.innerHTML = this.heroPerks.map(p => `
+      <div class="hero-perk-card ${p.id === this.activeHeroPerk ? 'active' : ''}" onclick="game.selectHeroPerk('${p.id}')">
+        <div class="perk-header">
+          <span style="font-size: 18px;">${p.icon}</span>
+          <b>${p.name}</b>
+        </div>
+        <div class="perk-desc">${p.desc}</div>
+      </div>
+    `).join('');
+  }
+
+  selectHeroPerk(id) {
+    this.activeHeroPerk = id;
+    localStorage.setItem('ks_hero_perk', id);
+    this.renderSuperheroGrid();
+    this.updateUI();
+    this.notify(`Wybrano talent: ${this.heroPerks.find(x => x.id === id).name}!`, '⚡');
+  }
+
+  openLeaderboardModal() {
+    const modal = document.getElementById('modalLeaderboard');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    this.renderMatchHistoryChart(this.activeCommander);
+  }
+
+  openSettingsModal() {
+    const modal = document.getElementById('modalSettings');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  openHelpModal() {
+    const modal = document.getElementById('modalHelp');
+    if (modal) modal.style.display = 'flex';
+  }
+
   openResearchModal() {
     const modal = document.getElementById('modalResearch');
-    modal.style.display = 'flex';
-    this.renderResearchGrid();
+    if (modal) modal.style.display = 'flex';
   }
 
-  renderResearchGrid() {
-    const grid = document.getElementById('researchGrid');
-    grid.innerHTML = '';
+  applySavedSettings() {
+    const theme = localStorage.getItem('ks_theme') || 'colonization';
+    const font = localStorage.getItem('ks_font') || 'montserrat';
+    const cursor = localStorage.getItem('ks_cursor') || 'sword';
 
-    this.techDefinitions.forEach(tech => {
-      const node = document.createElement('div');
-      node.className = 'tech-node';
-      const isUnlocked = this.techsUnlocked.includes(tech.id);
-      if (isUnlocked) node.classList.add('unlocked');
+    document.body.className = `theme-${theme} font-${font} cursor-${cursor}`;
 
-      node.innerHTML = `
-        <div style="font-size: 20px; margin-bottom: 4px;">${tech.icon}</div>
-        <div class="node-title">${t(tech.nameKey)}</div>
-        <div class="node-cost">${isUnlocked ? t('alreadyUnlocked') : `👑 ${tech.cost} Pieczęci`}</div>
-      `;
+    const fontSel = document.getElementById('settingFontSelect');
+    if (fontSel) fontSel.value = font.charAt(0).toUpperCase() + font.slice(1);
 
-      node.onclick = () => {
-        document.querySelectorAll('.tech-node').forEach(n => n.classList.remove('selected'));
-        node.classList.add('selected');
-        this.showTechDetail(tech);
-      };
-
-      grid.appendChild(node);
-    });
-
-    document.getElementById('techDetailCard').style.display = 'none';
+    const cursorSel = document.getElementById('settingCursorSelect');
+    if (cursorSel) cursorSel.value = cursor;
   }
 
-  showTechDetail(tech) {
-    const card = document.getElementById('techDetailCard');
-    card.style.display = 'block';
+  notify(msg, icon = '📢') {
+    const ticker = document.getElementById('eventTicker');
+    const tIcon = document.getElementById('tickerIcon');
+    const tText = document.getElementById('tickerText');
+    if (ticker && tText) {
+      if (tIcon) tIcon.textContent = icon;
+      tText.textContent = msg;
+      ticker.style.display = 'flex';
+    }
+  }
 
-    document.getElementById('techDetailTitle').textContent = `${tech.icon} ${t(tech.nameKey)}`;
-    document.getElementById('techDetailDesc').textContent = t(tech.descKey);
+  getModeNameKey() {
+    if (this.mode === 'dragon') return 'questDragonHunt';
+    if (this.mode === 'reclaim') return 'questReclaimRealm';
+    if (this.mode === 'treasury') return 'questRoyalTreasury';
+    return 'questRivalKingdoms';
+  }
 
-    const isUnlocked = this.techsUnlocked.includes(tech.id);
-    const btnUnlock = document.getElementById('btnUnlockTech');
-    const statusLabel = document.getElementById('techStatusLabel');
-
-    if (isUnlocked) {
-      btnUnlock.style.display = 'none';
-      statusLabel.textContent = `✔ ${t('alreadyUnlocked')}`;
-      statusLabel.style.color = '#2e7d32';
-    } else {
-      btnUnlock.style.display = 'inline-block';
-      statusLabel.textContent = '';
-      btnUnlock.textContent = t('unlockCost', { cost: tech.cost });
-
-      const canAfford = this.royalSeals >= tech.cost;
-      btnUnlock.disabled = !canAfford;
-      btnUnlock.style.opacity = canAfford ? '1' : '0.5';
-
-      btnUnlock.onclick = () => {
-        if (this.royalSeals >= tech.cost) {
-          this.royalSeals -= tech.cost;
-          this.techsUnlocked.push(tech.id);
-          localStorage.setItem('ks_seals', this.royalSeals);
-          localStorage.setItem('ks_techs', JSON.stringify(this.techsUnlocked));
-          sfx.playBuild();
-          this.renderResearchGrid();
-          this.showTechDetail(tech);
-          this.updateUI();
-        }
-      };
+  async fetchVersionInfo() {
+    try {
+      const res = await fetch(`version.json?_t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        const badge = document.getElementById('appVersionBadge');
+        if (badge && data.version) badge.textContent = `v${data.version}`;
+      }
+    } catch (e) {
+      // offline fallback
     }
   }
 }
 
-// Start game instance on window load
+// Global game instance initialization
+let game = null;
 window.addEventListener('DOMContentLoaded', () => {
-  applyTranslations();
-  window.game = new KeepsweeperGame();
+  game = new KeepsweeperGame();
 });
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  if (!game) game = new KeepsweeperGame();
+}

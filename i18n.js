@@ -6,9 +6,11 @@ const translations = {
     // Top Bar & Menu
     gameTitle: "Keepsweeper",
     menuPlay: "Graj",
-    menuEditor: "Edytor",
+    menuMode: "Zmień Silnik",
+    menuTrade: "Handel",
+    menuSuperhero: "SuperBohater",
+    menuLeaderboard: "Ranking & Pasmo",
     menuResearch: "Badania",
-    menuAchievements: "Osiągnięcia",
     menuSettings: "Ustawienia",
     menuHelp: "Pomoc",
 
@@ -178,9 +180,11 @@ const translations = {
     // Top Bar & Menu
     gameTitle: "Keepsweeper",
     menuPlay: "Play",
-    menuEditor: "Editor",
+    menuMode: "Switch Engine",
+    menuTrade: "Trade",
+    menuSuperhero: "Superhero",
+    menuLeaderboard: "Rankings & Streak",
     menuResearch: "Research",
-    menuAchievements: "Achievements",
     menuSettings: "Settings",
     menuHelp: "Help",
 

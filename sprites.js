@@ -50,6 +50,24 @@ const Sprites = {
     // Monsters & Flying Units
     this.cache.falcon = this.drawFalcon();
     this.cache.dragon = this.drawDragon();
+    // Nature, Lakes, Seas & Dragon Caves
+    this.cache.dragon_cave = this.drawDragonCave();
+    this.cache.lake = this.drawLakeTile();
+    this.cache.sea = this.drawSeaTile();
+
+    // Colonization Settlement Evolution Tiers
+    this.cache.settlement_camp = this.drawCampSettlement();
+    this.cache.settlement_hamlet = this.drawHamletSettlement();
+    this.cache.settlement_township = this.drawTownshipSettlement();
+    this.cache.settlement_citadel = this.drawCitadelSettlement();
+
+    // Classic Windows 95 Saper Pure Retro Engine Sprites
+    this.cache.classic_covered = this.drawClassicCoveredTile();
+    this.cache.classic_revealed = this.drawClassicRevealedTile();
+    this.cache.classic_mine = this.drawClassicMine();
+    this.cache.classic_detonated = this.drawClassicDetonatedMine();
+    this.cache.classic_misflagged = this.drawClassicMisflagged();
+    this.cache.classic_flag = this.drawClassicFlag();
   },
 
   // 1. Windows 95 Beveled Covered Tile (40x40)
@@ -990,6 +1008,389 @@ const Sprites = {
     ctx.moveTo(40, 34);
     ctx.lineTo(56, 8);
     ctx.stroke();
+
+    return canvas;
+  },
+
+  // 9. Volcanic Dragon Cave (40x40)
+  drawDragonCave() {
+    const s = this.tileSize;
+    const { canvas, ctx } = this.makeCanvas(s, s);
+
+    // Mountain rock base
+    ctx.fillStyle = '#424242';
+    ctx.beginPath();
+    ctx.moveTo(4, 38);
+    ctx.lineTo(12, 10);
+    ctx.lineTo(26, 6);
+    ctx.lineTo(36, 38);
+    ctx.closePath();
+    ctx.fill();
+
+    // Rocky highlights and cracks
+    ctx.fillStyle = '#616161';
+    ctx.fillRect(10, 12, 6, 8);
+    ctx.fillRect(24, 10, 8, 12);
+    ctx.fillStyle = '#212121';
+    ctx.fillRect(18, 14, 2, 8);
+
+    // Dark mysterious cavern entrance
+    ctx.fillStyle = '#1a0000';
+    ctx.beginPath();
+    ctx.ellipse(20, 28, 9, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Glowing fiery dragon eyes inside the dark cave!
+    ctx.fillStyle = '#ff3d00';
+    ctx.fillRect(16, 26, 2, 3);
+    ctx.fillRect(22, 26, 2, 3);
+    ctx.fillStyle = '#ffea00';
+    ctx.fillRect(16, 27, 1, 1);
+    ctx.fillRect(22, 27, 1, 1);
+
+    // Golden treasure glints around mouth
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(12, 34, 3, 3);
+    ctx.fillRect(26, 33, 4, 3);
+
+    // Volcanic smoke plume at peak
+    ctx.fillStyle = 'rgba(100, 100, 100, 0.6)';
+    ctx.beginPath();
+    ctx.arc(22, 5, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    return canvas;
+  },
+
+  // 10. Natural Inland Lake (40x40)
+  drawLakeTile() {
+    const s = this.tileSize;
+    const { canvas, ctx } = this.makeCanvas(s, s);
+
+    // Sand / bank rim
+    ctx.fillStyle = '#d7ccc8';
+    ctx.fillRect(0, 0, s, s);
+
+    // Deep fresh water
+    ctx.fillStyle = '#0288d1';
+    ctx.beginPath();
+    ctx.ellipse(20, 20, 17, 17, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Deep water core
+    ctx.fillStyle = '#01579b';
+    ctx.beginPath();
+    ctx.ellipse(20, 20, 11, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Water ripple reflections
+    ctx.fillStyle = '#81d4fa';
+    ctx.fillRect(12, 14, 8, 2);
+    ctx.fillRect(18, 22, 10, 2);
+    ctx.fillRect(14, 26, 6, 2);
+
+    return canvas;
+  },
+
+  // 11. Coastal Sea Shore (40x40)
+  drawSeaTile() {
+    const s = this.tileSize;
+    const { canvas, ctx } = this.makeCanvas(s, s);
+
+    ctx.fillStyle = '#0277bd';
+    ctx.fillRect(0, 0, s, s);
+
+    // Ocean waves foam
+    ctx.fillStyle = '#e1f5fe';
+    ctx.fillRect(2, 6, 12, 2);
+    ctx.fillRect(22, 14, 14, 2);
+    ctx.fillRect(6, 26, 16, 2);
+    ctx.fillRect(24, 34, 10, 2);
+
+    return canvas;
+  },
+
+  // 12. Settlement Evolution Tier 1: Pioneer Camp (Colonization Style)
+  drawCampSettlement() {
+    const s = this.tileSize;
+    const { canvas, ctx } = this.makeCanvas(s, s);
+
+    ctx.drawImage(this.cache.grass || this.drawGrassTile(), 0, 0);
+
+    // Pioneer Log Fire & Camp
+    ctx.fillStyle = '#5d4037';
+    ctx.fillRect(17, 26, 6, 3);
+    ctx.fillStyle = '#ff6d00';
+    ctx.beginPath();
+    ctx.moveTo(17, 26);
+    ctx.lineTo(20, 20);
+    ctx.lineTo(23, 26);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#ffd600';
+    ctx.fillRect(19, 23, 2, 3);
+
+    // Main Canvas Pioneer Tent
+    ctx.fillStyle = '#efebe9';
+    ctx.beginPath();
+    ctx.moveTo(6, 28);
+    ctx.lineTo(15, 10);
+    ctx.lineTo(24, 28);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#8d6e63';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Tent flap entrance
+    ctx.fillStyle = '#4e342e';
+    ctx.beginPath();
+    ctx.moveTo(12, 28);
+    ctx.lineTo(15, 16);
+    ctx.lineTo(18, 28);
+    ctx.closePath();
+    ctx.fill();
+
+    // Supply crate & banner
+    ctx.fillStyle = '#795548';
+    ctx.fillRect(26, 22, 9, 8);
+    ctx.fillStyle = '#1976d2';
+    ctx.fillRect(32, 8, 2, 14);
+    ctx.fillRect(26, 8, 6, 5);
+
+    return canvas;
+  },
+
+  // Settlement Evolution Tier 2: Forest Hamlet (Osada Leśna)
+  drawHamletSettlement() {
+    const s = this.tileSize;
+    const { canvas, ctx } = this.makeCanvas(s, s);
+
+    ctx.drawImage(this.cache.grass || this.drawGrassTile(), 0, 0);
+
+    // Wooden timber palisade fence
+    ctx.fillStyle = '#6d4c41';
+    ctx.fillRect(2, 34, 36, 4);
+
+    // Pioneer Timber Longhouse
+    ctx.fillStyle = '#8d6e63';
+    ctx.fillRect(8, 16, 24, 16);
+
+    // Thatch / Shingle Gable Roof
+    ctx.fillStyle = '#bcaaa4';
+    ctx.beginPath();
+    ctx.moveTo(4, 16);
+    ctx.lineTo(20, 6);
+    ctx.lineTo(36, 16);
+    ctx.closePath();
+    ctx.fill();
+
+    // Wooden door & windows
+    ctx.fillStyle = '#3e2723';
+    ctx.fillRect(17, 22, 6, 10);
+    ctx.fillStyle = '#ffe082';
+    ctx.fillRect(10, 20, 4, 4);
+    ctx.fillRect(26, 20, 4, 4);
+
+    // Water well
+    ctx.fillStyle = '#78909c';
+    ctx.fillRect(3, 24, 5, 5);
+
+    return canvas;
+  },
+
+  // Settlement Evolution Tier 3: Township (Miasteczko Handlowe)
+  drawTownshipSettlement() {
+    const s = this.tileSize;
+    const { canvas, ctx } = this.makeCanvas(s, s);
+
+    // Paved stone plaza base
+    ctx.fillStyle = '#b0bec5';
+    ctx.fillRect(0, 0, s, s);
+
+    // Left Townhouse (Stone)
+    ctx.fillStyle = '#cfd8dc';
+    ctx.fillRect(3, 14, 15, 22);
+    ctx.fillStyle = '#b71c1c';
+    ctx.fillRect(2, 8, 17, 6); // Red roof
+
+    // Right Townhouse
+    ctx.fillStyle = '#eceff1';
+    ctx.fillRect(21, 12, 16, 24);
+    ctx.fillStyle = '#1565c0';
+    ctx.fillRect(20, 6, 18, 6); // Blue roof
+
+    // Center Belltower
+    ctx.fillStyle = '#78909c';
+    ctx.fillRect(15, 4, 10, 16);
+    ctx.fillStyle = '#ffd54f';
+    ctx.fillRect(18, 2, 4, 4); // Golden spire
+
+    // Arched market gateway
+    ctx.fillStyle = '#37474f';
+    ctx.fillRect(16, 24, 8, 14);
+
+    return canvas;
+  },
+
+  // Settlement Evolution Tier 4: Royal Citadel / Grand Fortress (Królewska Twierdza)
+  drawCitadelSettlement() {
+    const s = this.tileSize;
+    const { canvas, ctx } = this.makeCanvas(s, s);
+
+    // Solid Granite base
+    ctx.fillStyle = '#455a64';
+    ctx.fillRect(0, 0, s, s);
+
+    // Mighty Battlements & Curtains
+    ctx.fillStyle = '#78909c';
+    ctx.fillRect(4, 12, 32, 24);
+
+    // Great Bastion Towers
+    ctx.fillStyle = '#546e7a';
+    ctx.fillRect(2, 6, 10, 30);
+    ctx.fillRect(28, 6, 10, 30);
+
+    // Crenellations
+    ctx.fillStyle = '#37474f';
+    ctx.fillRect(2, 4, 3, 3);
+    ctx.fillRect(8, 4, 4, 3);
+    ctx.fillRect(28, 4, 4, 3);
+    ctx.fillRect(35, 4, 3, 3);
+
+    // Grand Keep Sanctuary
+    ctx.fillStyle = '#90a4ae';
+    ctx.fillRect(12, 4, 16, 20);
+
+    // Portcullis & Iron Gate
+    ctx.fillStyle = '#212121';
+    ctx.fillRect(16, 24, 8, 14);
+
+    // Golden Royal Lion Heraldry
+    ctx.fillStyle = '#ffd700';
+    ctx.fillRect(18, 12, 4, 6);
+    // Royal Banners atop towers
+    ctx.fillStyle = '#d50000';
+    ctx.fillRect(5, 0, 5, 4);
+    ctx.fillRect(30, 0, 5, 4);
+
+    return canvas;
+  },
+
+  // --- Classic Windows 95 Pure Saper Sprites ---
+  drawClassicCoveredTile() {
+    const s = this.tileSize;
+    const { canvas, ctx } = this.makeCanvas(s, s);
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillRect(0, 0, s, s);
+    // Classic 3D Bevel
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, s, 3);
+    ctx.fillRect(0, 0, 3, s);
+    ctx.fillStyle = '#808080';
+    ctx.fillRect(s - 3, 0, 3, s);
+    ctx.fillRect(0, s - 3, s, 3);
+    return canvas;
+  },
+
+  drawClassicRevealedTile() {
+    const s = this.tileSize;
+    const { canvas, ctx } = this.makeCanvas(s, s);
+    ctx.fillStyle = '#c0c0c0';
+    ctx.fillRect(0, 0, s, s);
+    ctx.strokeStyle = '#808080';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, s - 1, s - 1);
+    return canvas;
+  },
+
+  drawClassicMine() {
+    const s = this.tileSize;
+    const { canvas, ctx } = this.makeCanvas(s, s);
+    ctx.drawImage(this.drawClassicRevealedTile(), 0, 0);
+
+    // Black spherical naval mine with spikes
+    const cx = s / 2;
+    const cy = s / 2;
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Spikes (horizontal, vertical, diagonal)
+    ctx.fillRect(cx - 13, cy - 2, 26, 4);
+    ctx.fillRect(cx - 2, cy - 13, 4, 26);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillRect(-12, -2, 24, 4);
+    ctx.fillRect(-2, -12, 4, 24);
+    ctx.restore();
+
+    // White specular highlight
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(cx - 4, cy - 4, 3, 3);
+
+    return canvas;
+  },
+
+  drawClassicDetonatedMine() {
+    const s = this.tileSize;
+    const { canvas, ctx } = this.makeCanvas(s, s);
+    // Red explosion background
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(0, 0, s, s);
+    ctx.strokeStyle = '#808080';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0.5, 0.5, s - 1, s - 1);
+
+    const cx = s / 2;
+    const cy = s / 2;
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillRect(cx - 13, cy - 2, 26, 4);
+    ctx.fillRect(cx - 2, cy - 13, 4, 26);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(cx - 4, cy - 4, 3, 3);
+    return canvas;
+  },
+
+  drawClassicMisflagged() {
+    const s = this.tileSize;
+    const { canvas, ctx } = this.makeCanvas(s, s);
+    ctx.drawImage(this.drawClassicMine(), 0, 0);
+    // Big Red 'X' over mine
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(6, 6);
+    ctx.lineTo(s - 6, s - 6);
+    ctx.moveTo(s - 6, 6);
+    ctx.lineTo(6, s - 6);
+    ctx.stroke();
+    return canvas;
+  },
+
+  drawClassicFlag() {
+    const s = this.tileSize;
+    const { canvas, ctx } = this.makeCanvas(s, s);
+    ctx.drawImage(this.drawClassicCoveredTile(), 0, 0);
+
+    // Classic black pole and triangle flag
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(14, 8, 3, 22);
+    ctx.fillRect(9, 28, 14, 4);
+    ctx.fillRect(12, 26, 8, 2);
+
+    ctx.fillStyle = '#ff0000';
+    ctx.beginPath();
+    ctx.moveTo(17, 8);
+    ctx.lineTo(30, 14);
+    ctx.lineTo(17, 20);
+    ctx.closePath();
+    ctx.fill();
 
     return canvas;
   }
