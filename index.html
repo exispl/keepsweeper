@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Keepsweeper - Minesweeper Kingdom Defense</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Main Windows 95 Game Window -->
+  <div class="win95-window" id="appWindow">
+    
+    <!-- Title Bar -->
+    <div class="win95-titlebar">
+      <div class="title-left">
+        <span class="title-icon">🏰</span>
+        <span data-i18n="gameTitle">Keepsweeper</span>
+        <span class="version-tag" id="appVersionBadge">v1.2.0</span>
+      </div>
+      <div class="title-controls">
+        <button class="win-btn" id="btnHelpToggle" title="Pomoc">?</button>
+        <button class="win-btn" id="btnMinimize">_</button>
+        <button class="win-btn" id="btnMaximize">□</button>
+        <button class="win-btn" id="btnCloseApp">✕</button>
+      </div>
+    </div>
+
+    <!-- Menu Bar -->
+    <div class="win95-menubar">
+      <div class="menu-item" id="menuPlay" data-i18n="menuPlay">Graj</div>
+      <div class="menu-item" id="menuResearch">
+        <span data-i18n="menuResearch">Badania</span>
+        <span class="badge-seals" id="menuSealsBadge">25</span>
+      </div>
+      <div class="menu-item" id="menuSettings" data-i18n="menuSettings">Ustawienia</div>
+      <div class="menu-item" id="menuHelp" data-i18n="menuHelp">Pomoc</div>
+      <!-- Quick Language Switcher -->
+      <div style="margin-left: auto; display: flex; align-items: center; gap: 4px; padding-right: 4px;">
+        <span style="font-size: 10px; font-weight: bold;">LANG:</span>
+        <select id="quickLangSelect" style="font-size: 11px; padding: 1px 3px;">
+          <option value="pl">Polski (PL)</option>
+          <option value="en">English (EN)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Status Bar (Classic Minesweeper Header) -->
+    <div class="win95-header-panel">
+      <div class="status-main-row">
+        <!-- Left: Resources Counter -->
+        <div class="led-counter-box">
+          <span class="led-label" data-i18n="resources">Zasoby</span>
+          <div class="led-display" id="resCounter">0190</div>
+        </div>
+
+        <!-- Center: Mission Status & Timer -->
+        <div class="mission-badge" id="missionBadge">
+          <span class="mission-icon">🐉</span>
+          <div class="mission-info">
+            <span class="mission-title" id="missionTitle">Dragon Hunt - Poziom 1</span>
+            <span class="mission-sub" id="missionSub">0/1 pokonano</span>
+          </div>
+          <div class="level-timer" id="levelTimer">00:00</div>
+        </div>
+
+        <!-- Right: Uncovered Counter -->
+        <div class="led-counter-box">
+          <span class="led-label" data-i18n="uncovered">Odkryte</span>
+          <div class="led-display" id="uncoveredCounter">000</div>
+        </div>
+      </div>
+
+      <!-- Sub Row: Workers, Sappers, Soldiers, Controls -->
+      <div class="status-sub-row">
+        <div class="unit-counters">
+          <div class="unit-chip" title="Robotnicy (Wolni / Wszyscy)">
+            <span>👷</span>
+            <span data-i18n="workers">Robotnicy</span>
+            <span id="workersCount">3/3</span>
+          </div>
+          <div class="unit-chip" style="background: #fff8e1; border: 1px solid #ffd54f; padding: 1px 6px; border-radius: 3px;" title="Saperzy badający niebezpieczne tereny. Kliknięcie miny kosztuje 1 Sapera!">
+            <span>⛑️</span>
+            <span data-i18n="sappers">Saperzy</span>
+            <b id="sappersCount" style="color: #b71c1c;">3/3</b>
+            <button class="win-btn" id="btnQuickRecruitSapper" style="width: auto; padding: 0 4px; font-size: 10px; margin-left: 2px;" title="Doszkol nowego sapera za 40 zasobów">+⛑️ 40💰</button>
+          </div>
+          <div class="unit-chip" title="Żołnierze (Aktywni / Limit)">
+            <span>⚔️</span>
+            <span data-i18n="soldiers">Żołnierze</span>
+            <span id="soldiersCount">0/5</span>
+          </div>
+          <div id="shieldIndicator" style="display: none; align-items: center; gap: 3px; font-weight: bold; color: #0d47a1; background: #e1f5fe; border: 1px solid #0288d1; padding: 1px 6px; border-radius: 3px;">
+            <span>🛡️</span>
+            <span>PANCERZ</span>
+          </div>
+        </div>
+
+        <div class="zoom-controls">
+          <button class="win-btn zoom-btn" id="btnZoomOut" title="Oddal">-</button>
+          <span id="zoomLevelText" style="font-size: 10px; width: 34px; text-align: center;">100%</span>
+          <button class="win-btn zoom-btn" id="btnZoomIn" title="Przybliż">+</button>
+          <button class="win-btn" id="btnToggleFlagMode" style="width: auto; padding: 0 6px;" title="Przełącz tryb flagowania na dotyku">🚩 Flaga</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Event Ticker / Notifications -->
+    <div class="event-ticker" id="eventTicker">
+      <span id="tickerIcon">📢</span>
+      <span id="tickerText">Królestwo oczekuje na twoje rozkazy!</span>
+    </div>
+
+    <!-- Main Viewport with Game Board -->
+    <div class="game-viewport" id="viewport">
+      <canvas id="gameCanvas"></canvas>
+      <div class="floating-tooltip" id="tooltip"></div>
+    </div>
+
+    <!-- Building Palette (Appears when 'Build' is clicked) -->
+    <div class="build-palette" id="buildPalette">
+      <div class="build-card" data-build="house">
+        <span>🏠</span>
+        <div>
+          <b data-i18n="buildingHouse">Chata</b>
+          <div class="cost-tag">💰 40</div>
+        </div>
+      </div>
+      <div class="build-card" data-build="barracks">
+        <span>🛡️</span>
+        <div>
+          <b data-i18n="buildingBarracks">Koszary</b>
+          <div class="cost-tag">💰 80</div>
+        </div>
+      </div>
+      <div class="build-card" data-build="watchtower">
+        <span>🏹</span>
+        <div>
+          <b data-i18n="buildingWatchtower">Wieża</b>
+          <div class="cost-tag">💰 60</div>
+        </div>
+      </div>
+      <div class="build-card" data-build="market">
+        <span>🏪</span>
+        <div>
+          <b data-i18n="buildingMarket">Targ</b>
+          <div class="cost-tag">💰 100</div>
+        </div>
+      </div>
+      <div class="build-card" data-build="farm">
+        <span>🌾</span>
+        <div>
+          <b data-i18n="buildingFarm">Farma</b>
+          <div class="cost-tag">💰 50</div>
+        </div>
+      </div>
+      <div class="build-card" data-build="wall">
+        <span>🧱</span>
+        <div>
+          <b data-i18n="buildingWall">Mur</b>
+          <div class="cost-tag">💰 15</div>
+        </div>
+      </div>
+      <div class="build-card" data-build="wonder">
+        <span>🏛️</span>
+        <div>
+          <b data-i18n="buildingWonder">Cud Świata</b>
+          <div class="cost-tag">💰 150</div>
+        </div>
+      </div>
+      <div class="build-card" data-build="settler">
+        <span>🐎</span>
+        <div>
+          <b data-i18n="buildingSettler">Osadnicy</b>
+          <div class="cost-tag">💰 70</div>
+        </div>
+      </div>
+      <button class="win-btn" id="btnClosePalette" style="padding: 2px 8px; height: 100%;">✕</button>
+    </div>
+
+    <!-- Royal Powers Palette (Appears when 'Moce' is clicked) -->
+    <div class="powers-palette" id="powersPalette">
+      <div class="power-card" id="powerCardOracle" data-power="oracle" title="Ujawnia wybrane pole w ciemno bez ryzyka detonacji!">
+        <span style="font-size: 16px;">🔮</span>
+        <div>
+          <b data-i18n="powerOracle">Wyrocznia</b>
+          <div class="power-cd-overlay" id="cdOracle">Gotowa!</div>
+        </div>
+      </div>
+      <div class="power-card" id="powerCardFalcon" data-power="falcon" title="Sokół bada obszar 3x3, odkrywa bezpieczne kafelki!">
+        <span style="font-size: 16px;">🦅</span>
+        <div>
+          <b data-i18n="powerFalcon">Sokoli Zwiad</b>
+          <div class="power-cd-overlay" id="cdFalcon">Gotowy!</div>
+        </div>
+      </div>
+      <div class="power-card" id="powerCardShield" data-power="shield" title="Chroni przed skutkiem następnej skuchy (saper nie ginie)!">
+        <span style="font-size: 16px;">🛡️</span>
+        <div>
+          <b data-i18n="powerShield">Pancerz</b>
+          <div class="power-cd-overlay" id="cdShield">Gotowy!</div>
+        </div>
+      </div>
+      <div class="power-card" id="powerCardBombard" data-power="bombard" title="Zdalnie niszczy podejrzane pole z dystansu bez ofiar w ludziach!">
+        <span style="font-size: 16px;">💣</span>
+        <div>
+          <b data-i18n="powerBombard">Katapulta</b>
+          <div class="power-cd-overlay" id="cdBombard">Gotowa!</div>
+        </div>
+      </div>
+      <div class="power-card" id="powerCardProbe" data-power="probe" title="80% szansy na rozbrojenie miny i pozyskanie złota!">
+        <span style="font-size: 16px;">🧲</span>
+        <div>
+          <b data-i18n="powerProbe">Sonda</b>
+          <div class="power-cd-overlay" id="cdProbe">Gotowa!</div>
+        </div>
+      </div>
+      <button class="win-btn" id="btnClosePowers" style="padding: 2px 8px; height: 100%;">✕</button>
+    </div>
+
+    <!-- Bottom Action Bar -->
+    <div class="win95-action-bar">
+      <button class="action-btn" id="btnBuildToggle">
+        <span>🔨</span>
+        <span data-i18n="btnBuild">Buduj</span>
+      </button>
+      <button class="action-btn" id="btnPowersToggle" style="background: #e8eaf6; border-color: #5c6bc0;">
+        <span>✨</span>
+        <span data-i18n="btnPowers">Moce</span>
+      </button>
+      <button class="action-btn" id="btnUpgradesToggle">
+        <span>📜</span>
+        <span data-i18n="btnUpgrades">Ulepszenia</span>
+      </button>
+      <button class="action-btn" id="btnTreasuresToggle">
+        <span>🏆</span>
+        <span data-i18n="btnTreasures">Skarby</span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Modal: Quests / Campaign (Screen 4) -->
+  <div class="modal-overlay" id="modalQuests">
+    <div class="modal-window">
+      <div class="modal-header">
+        <span data-i18n="tabQuests">Zadania & Kampania</span>
+        <button class="win-btn modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="dialog-tabs">
+          <div class="dialog-tab active" data-quest-tab="quests" data-i18n="tabQuests">Zadania</div>
+          <div class="dialog-tab" data-quest-tab="wilds" data-i18n="tabWilds">Bezdroża</div>
+          <div class="dialog-tab" data-quest-tab="siege" data-i18n="tabSiege">Oblężenie</div>
+        </div>
+
+        <div class="quests-container">
+          <!-- Left side: Mode selection -->
+          <div class="quests-list">
+            <div class="quest-item selected" data-mode="dragon">
+              <b data-i18n="questDragonHunt">Polowanie na Smoka</b>
+              <div class="quest-progress" id="progressDragon">1/20 ukończono</div>
+            </div>
+            <div class="quest-item" data-mode="reclaim">
+              <b data-i18n="questReclaimRealm">Odzyskanie Królestwa</b>
+              <div class="quest-progress" id="progressReclaim">1/20 ukończono</div>
+            </div>
+            <div class="quest-item" data-mode="treasury">
+              <b data-i18n="questRoyalTreasury">Królewski Skarbiec</b>
+              <div class="quest-progress" id="progressTreasury">0/20 ukończono</div>
+            </div>
+            <div class="quest-item" data-mode="siege">
+              <b data-i18n="questRivalKingdoms">Rywalizujące Królestwa</b>
+              <div class="quest-progress" id="progressSiege">0/20 ukończono</div>
+            </div>
+          </div>
+
+          <!-- Right side: Level grid and detail -->
+          <div class="quest-detail-view">
+            <h3 id="questModalTitle" style="color: #b71c1c;">Polowanie na Smoka - Poziom 1</h3>
+            <p id="questModalDesc" style="color: #555; margin-bottom: 8px;">Odszukaj legowisko bestii na planszy i zniszcz smoka!</p>
+            
+            <div class="level-grid" id="levelGrid">
+              <!-- Dynamically populated 1 to 20 -->
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="action-btn" id="btnStartLevel" style="background: #4caf50; color: white;">
+          <span data-i18n="btnStartMission">Rozpocznij Misję</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Research / Tech Tree (Screen 5) -->
+  <div class="modal-overlay" id="modalResearch">
+    <div class="modal-window">
+      <div class="modal-header">
+        <span data-i18n="researchTitle">Drzewo Badań Królewskich</span>
+        <button class="win-btn modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <p data-i18n="researchSubtitle" style="font-size: 11px; color: #444;">Wydawaj Królewskie Pieczęcie na nowe Budynki i ulepszenia.</p>
+          <div style="background: #fff8e1; border: 1px solid #ffd54f; padding: 4px 10px; font-weight: bold; border-radius: 4px;">
+            <span>👑 </span><span data-i18n="royalSeals">Pieczęcie</span>: <span id="researchSealsCount">25</span>
+          </div>
+        </div>
+
+        <!-- Tech Tree Grid -->
+        <div class="research-tree-grid" id="researchGrid">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Selected Tech Card Details (Matches Screen 5) -->
+        <div id="techDetailCard" style="margin-top: 12px; background: #fff; border: 2px inset var(--win-dark); padding: 10px; display: none;">
+          <h4 id="techDetailTitle" style="color: #1565c0; margin-bottom: 4px;">Targ</h4>
+          <p id="techDetailDesc" style="font-size: 11px; color: #555; margin-bottom: 8px;">Zwiększa zysk ze stojących obok domów.</p>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <button class="action-btn" id="btnUnlockTech" style="min-width: 140px; background: #ff9800; color: #000;">
+              Odblokuj
+            </button>
+            <span id="techStatusLabel" style="font-size: 11px; font-weight: bold; color: #2e7d32;"></span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="action-btn modal-close" data-i18n="returnToBoard">Powrót do gry</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Settings & Languages -->
+  <div class="modal-overlay" id="modalSettings">
+    <div class="modal-window" style="width: 440px;">
+      <div class="modal-header">
+        <span data-i18n="settingsTitle">Ustawienia Gry</span>
+        <button class="win-btn modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-group">
+          <div class="setting-row">
+            <span data-i18n="settingLanguage">Język / Language:</span>
+            <select id="settingLangSelect">
+              <option value="pl">Polski (PL)</option>
+              <option value="en">English (EN)</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <span data-i18n="settingSound">Dźwięki (SFX):</span>
+            <input type="checkbox" id="settingSoundToggle" checked>
+          </div>
+          <div class="setting-row">
+            <span data-i18n="settingChordClick">Szybki akord (klik na cyfrę):</span>
+            <input type="checkbox" id="settingChordToggle" checked>
+          </div>
+          <div class="setting-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #bbb;">
+            <span data-i18n="settingVersion">Wersja gry:</span>
+            <span id="settingsVersionText" style="font-family: monospace; font-weight: bold; color: #1565c0;">v1.2.0</span>
+          </div>
+          <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 4px; padding-top: 4px; border-bottom: none;">
+            <span style="font-size: 10px; color: #555;">Zainstalowane nowości:</span>
+            <div id="settingsFeaturesList" style="font-size: 10px; color: #333; background: #fff; border: 1px inset #808080; padding: 4px 6px; width: 100%; max-height: 80px; overflow-y: auto;">
+              • System Saperów i Skuch<br>
+              • Moce Królewskie (Wyrocznia, Sokół, Pancerz, Katapulta, Sonda)<br>
+              • Drzewo Badań & Wykrywanie wersji
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="action-btn modal-close" data-i18n="btnClose">Zamknij</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Help -->
+  <div class="modal-overlay" id="modalHelp">
+    <div class="modal-window" style="width: 500px;">
+      <div class="modal-header">
+        <span data-i18n="helpTitle">Pomoc</span>
+        <button class="win-btn modal-close">✕</button>
+      </div>
+      <div class="modal-body" data-i18n-html="helpText">
+        <!-- Help text loaded from i18n -->
+      </div>
+      <div class="modal-footer">
+        <button class="action-btn modal-close" data-i18n="btnClose">Zamknij</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Game Over / Victory -->
+  <div class="modal-overlay" id="modalGameOver">
+    <div class="modal-window" style="width: 440px; text-align: center;">
+      <div class="modal-header">
+        <span id="endgameHeaderTitle">Koniec Gry</span>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <h2 id="endgameTitle" style="font-size: 24px; margin-bottom: 8px;">ZWYCIĘSTWO!</h2>
+        <p id="endgameDesc" style="font-size: 13px; color: #424242; margin-bottom: 16px;">Ocaliłeś królestwo!</p>
+        <div id="endgameRewards" style="background: #fff8e1; border: 1px solid #ffd54f; padding: 10px; border-radius: 4px; display: inline-block;">
+          <span>Zdobyte Pieczęcie: </span><b id="rewardSeals">+2 👑</b>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: center;">
+        <button class="action-btn" id="btnEndgameAction" style="background: #1976d2; color: white;">
+          Kontynuuj
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="i18n.js"></script>
+  <script src="audio.js"></script>
+  <script src="sprites.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "version": "1.3.0",
+  "build": "20261008.1555",
+  "releaseDate": "2026-10-08 15:55",
+  "features": [
+    "Większe pola 40px i ulepszone grafiki postaci (24px)",
+    "Żywe królestwo: autonomiczny ruch mieszkańców i saperów po odkrytych polach",
+    "Elementy Civilization 1: Wioski Indian (Wigwamy) z losowymi darami starszyzny",
+    "Cuda Świata (Monolity odkrywające bezpieczne pola) oraz Osadnicy kładący drogi",
+    "Poprawiony PPM: niezawodne zdejmowanie i stawianie flag",
+    "Kompletna dokumentacja projektu i integracja z GitHub"
+  ]
+}

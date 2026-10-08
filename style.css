@@ -1,0 +1,729 @@
+/* Keepsweeper Windows 95 / Retro Classic Theme */
+
+:root {
+  --win-bg: #c0c0c0;
+  --win-dark: #808080;
+  --win-darker: #404040;
+  --win-light: #ffffff;
+  --win-blue: #000080;
+  --win-blue-grad: #1084d0;
+  --led-red: #ff1010;
+  --led-bg: #000000;
+  --font-retro: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  --font-led: 'Courier New', Courier, monospace;
+}
+
+* {
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: #008080; /* Classic Win95 Teal desktop */
+  font-family: var(--font-retro);
+  font-size: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 10px;
+  overflow: hidden;
+}
+
+/* Main Windows 95 Application Window */
+.win95-window {
+  background: var(--win-bg);
+  border-top: 2px solid var(--win-light);
+  border-left: 2px solid var(--win-light);
+  border-right: 2px solid var(--win-darker);
+  border-bottom: 2px solid var(--win-darker);
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  width: 900px;
+  max-width: 98vw;
+  height: 94vh;
+  max-height: 860px;
+  position: relative;
+}
+
+/* Title Bar */
+.win95-titlebar {
+  background: linear-gradient(90deg, var(--win-blue), var(--win-blue-grad));
+  color: white;
+  padding: 3px 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  height: 26px;
+}
+
+.title-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.title-icon {
+  font-size: 14px;
+}
+
+.version-tag {
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  margin-left: 6px;
+  font-family: monospace;
+}
+
+.version-tag.updated {
+  background: #00e676;
+  color: #000;
+  box-shadow: 0 0 6px #00e676;
+}
+
+.title-controls {
+  display: flex;
+  gap: 3px;
+}
+
+.win-btn {
+  background: var(--win-bg);
+  border-top: 2px solid var(--win-light);
+  border-left: 2px solid var(--win-light);
+  border-right: 2px solid var(--win-darker);
+  border-bottom: 2px solid var(--win-darker);
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.win-btn:active {
+  border-top: 2px solid var(--win-darker);
+  border-left: 2px solid var(--win-darker);
+  border-right: 2px solid var(--win-light);
+  border-bottom: 2px solid var(--win-light);
+  padding-top: 1px;
+  padding-left: 1px;
+}
+
+/* Menu Bar */
+.win95-menubar {
+  background: var(--win-bg);
+  border-bottom: 1px solid var(--win-dark);
+  display: flex;
+  gap: 4px;
+  padding: 2px 4px;
+}
+
+.menu-item {
+  padding: 2px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid transparent;
+}
+
+.menu-item:hover {
+  background: #000080;
+  color: white;
+}
+
+.badge-seals {
+  background: #ff9800;
+  color: #000;
+  font-weight: bold;
+  padding: 0px 4px;
+  border-radius: 8px;
+  font-size: 10px;
+}
+
+/* Top Status Panel (Classic Minesweeper Header) */
+.win95-header-panel {
+  background: var(--win-bg);
+  margin: 6px 8px 4px 8px;
+  border-top: 2px solid var(--win-dark);
+  border-left: 2px solid var(--win-dark);
+  border-right: 2px solid var(--win-light);
+  border-bottom: 2px solid var(--win-light);
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.status-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Retro 7-Segment LED Counter */
+.led-counter-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.led-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  color: #333;
+  margin-bottom: 1px;
+}
+
+.led-display {
+  background: var(--led-bg);
+  color: var(--led-red);
+  font-family: var(--font-led);
+  font-size: 24px;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-top: 2px solid var(--win-darker);
+  border-left: 2px solid var(--win-darker);
+  border-right: 2px solid var(--win-light);
+  border-bottom: 2px solid var(--win-light);
+  letter-spacing: 2px;
+  min-width: 74px;
+  text-align: right;
+  text-shadow: 0 0 5px rgba(255, 0, 0, 0.8);
+}
+
+/* Center Mission Badge */
+.mission-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #e8e8e8;
+  padding: 4px 12px;
+  border-top: 2px solid var(--win-dark);
+  border-left: 2px solid var(--win-dark);
+  border-right: 2px solid var(--win-light);
+  border-bottom: 2px solid var(--win-light);
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.mission-icon {
+  font-size: 20px;
+}
+
+.mission-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.mission-title {
+  font-weight: bold;
+  font-size: 13px;
+  color: #1a237e;
+}
+
+.mission-sub {
+  font-size: 11px;
+  color: #424242;
+}
+
+.level-timer {
+  font-family: var(--font-led);
+  font-size: 14px;
+  background: #333;
+  color: #76ff03;
+  padding: 2px 6px;
+  border-radius: 2px;
+  font-weight: bold;
+}
+
+/* Sub bar: Workers & Soldiers info */
+.status-sub-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 2px;
+  font-size: 11px;
+}
+
+.unit-counters {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.unit-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+}
+
+.zoom-controls {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.zoom-btn {
+  width: 22px;
+  height: 20px;
+  font-weight: bold;
+}
+
+/* Notification Bar */
+.event-ticker {
+  background: #fff9c4;
+  border: 1px solid #fbc02d;
+  color: #b71c1c;
+  font-weight: bold;
+  padding: 2px 8px;
+  margin: 0 8px 4px 8px;
+  font-size: 11px;
+  display: none;
+  align-items: center;
+  gap: 6px;
+  animation: fadeIn 0.3s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Game Viewport / Canvas Container */
+.game-viewport {
+  flex: 1;
+  margin: 0 8px;
+  background: #757575;
+  border-top: 3px solid var(--win-dark);
+  border-left: 3px solid var(--win-dark);
+  border-right: 3px solid var(--win-light);
+  border-bottom: 3px solid var(--win-light);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#gameCanvas {
+  cursor: crosshair;
+  background-color: #8bc34a;
+  image-rendering: pixelated;
+}
+
+/* Floating overlay for build ghost / tooltips */
+.floating-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  display: none;
+  z-index: 50;
+}
+
+/* Bottom Action Bar */
+.win95-action-bar {
+  background: var(--win-bg);
+  padding: 6px 8px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.action-btn {
+  background: var(--win-bg);
+  border-top: 2px solid var(--win-light);
+  border-left: 2px solid var(--win-light);
+  border-right: 2px solid var(--win-darker);
+  border-bottom: 2px solid var(--win-darker);
+  padding: 6px 18px;
+  font-family: var(--font-retro);
+  font-size: 12px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  min-width: 120px;
+  justify-content: center;
+}
+
+.action-btn.active {
+  background: #dcdcdc;
+  border-top: 2px solid var(--win-darker);
+  border-left: 2px solid var(--win-darker);
+  border-right: 2px solid var(--win-light);
+  border-bottom: 2px solid var(--win-light);
+}
+
+.action-btn:active {
+  border-top: 2px solid var(--win-darker);
+  border-left: 2px solid var(--win-darker);
+  border-right: 2px solid var(--win-light);
+  border-bottom: 2px solid var(--win-light);
+  padding-top: 7px;
+  padding-left: 19px;
+}
+
+/* Building Palette Bar (slides above action bar when active) */
+.build-palette {
+  background: #eaeaea;
+  border-top: 2px solid var(--win-dark);
+  border-bottom: 2px solid var(--win-light);
+  padding: 6px 10px;
+  display: none;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.build-card {
+  background: var(--win-bg);
+  border-top: 2px solid var(--win-light);
+  border-left: 2px solid var(--win-light);
+  border-right: 2px solid var(--win-darker);
+  border-bottom: 2px solid var(--win-darker);
+  padding: 4px 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.build-card.selected {
+  background: #bbdefb;
+  border-top: 2px solid var(--win-darker);
+  border-left: 2px solid var(--win-darker);
+  border-right: 2px solid var(--win-light);
+  border-bottom: 2px solid var(--win-light);
+}
+
+.cost-tag {
+  color: #e65100;
+  font-weight: bold;
+}
+
+/* Royal Powers Palette Bar */
+.powers-palette {
+  background: #f0f4f8;
+  border-top: 2px solid var(--win-dark);
+  border-bottom: 2px solid var(--win-light);
+  padding: 6px 10px;
+  display: none;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.power-card {
+  background: var(--win-bg);
+  border-top: 2px solid var(--win-light);
+  border-left: 2px solid var(--win-light);
+  border-right: 2px solid var(--win-darker);
+  border-bottom: 2px solid var(--win-darker);
+  padding: 5px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  position: relative;
+  transition: all 0.15s;
+}
+
+.power-card:hover {
+  filter: brightness(1.05);
+}
+
+.power-card.active {
+  background: #fff9c4;
+  border-color: #fbc02d;
+  box-shadow: 0 0 6px #fbc02d;
+}
+
+.power-card.cooldown {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #cfd8dc;
+}
+
+.power-cd-overlay {
+  font-size: 10px;
+  font-weight: bold;
+  color: #c62828;
+}
+
+/* Screen Shake upon Sapper Mishap Explosion */
+.screen-shake {
+  animation: shake 0.35s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translate3d(-2px, -1px, 0); }
+  20%, 80% { transform: translate3d(3px, 2px, 0); }
+  30%, 50%, 70% { transform: translate3d(-4px, -3px, 0); }
+  40%, 60% { transform: translate3d(4px, 3px, 0); }
+}
+
+/* Universal Modal Dialog Styling */
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+
+.modal-window {
+  background: var(--win-bg);
+  border-top: 2px solid var(--win-light);
+  border-left: 2px solid var(--win-light);
+  border-right: 2px solid var(--win-darker);
+  border-bottom: 2px solid var(--win-darker);
+  box-shadow: 3px 3px 15px rgba(0, 0, 0, 0.6);
+  width: 640px;
+  max-width: 94%;
+  max-height: 90%;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  background: linear-gradient(90deg, var(--win-blue), var(--win-blue-grad));
+  color: white;
+  padding: 3px 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+}
+
+.modal-body {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 8px 12px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid var(--win-dark);
+}
+
+/* Tabs inside Modals */
+.dialog-tabs {
+  display: flex;
+  gap: 2px;
+  border-bottom: 2px solid var(--win-dark);
+  margin-bottom: 10px;
+}
+
+.dialog-tab {
+  background: var(--win-bg);
+  border-top: 2px solid var(--win-light);
+  border-left: 2px solid var(--win-light);
+  border-right: 2px solid var(--win-darker);
+  padding: 4px 14px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 11px;
+}
+
+.dialog-tab.active {
+  background: #ffffff;
+  border-bottom: 2px solid #ffffff;
+  margin-bottom: -2px;
+}
+
+/* Quests Grid (Screen 4 Layout) */
+.quests-container {
+  display: flex;
+  gap: 12px;
+}
+
+.quests-list {
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.quest-item {
+  background: #e0e0e0;
+  border: 1px solid var(--win-dark);
+  padding: 6px 8px;
+  cursor: pointer;
+}
+
+.quest-item.selected {
+  background: #1565c0;
+  color: white;
+}
+
+.quest-progress {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.quest-detail-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.level-box {
+  background: var(--win-bg);
+  border-top: 2px solid var(--win-light);
+  border-left: 2px solid var(--win-light);
+  border-right: 2px solid var(--win-darker);
+  border-bottom: 2px solid var(--win-darker);
+  padding: 8px;
+  text-align: center;
+  font-weight: bold;
+  cursor: pointer;
+  position: relative;
+}
+
+.level-box.completed {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.level-box.selected {
+  background: #ffecb3;
+  border-color: #ff8f00;
+}
+
+.level-box.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #b0bec5;
+}
+
+/* Research Tree (Screen 5 Layout) */
+.research-tree-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.research-tree-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  padding: 8px;
+  background: #424242;
+  border: 2px inset var(--win-dark);
+}
+
+.tech-node {
+  background: #212121;
+  border: 2px solid #757575;
+  color: #fff;
+  padding: 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.tech-node:hover {
+  border-color: #ffb300;
+}
+
+.tech-node.unlocked {
+  background: #1b5e20;
+  border-color: #66bb6a;
+}
+
+.tech-node.selected {
+  border-color: #ffd700;
+  box-shadow: 0 0 8px #ffd700;
+}
+
+.node-title {
+  font-weight: bold;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.node-cost {
+  font-size: 11px;
+  color: #ffb300;
+}
+
+/* Settings Form */
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px dotted #9e9e9e;
+}
+
+.setting-row select, .setting-row input {
+  padding: 3px 6px;
+  font-family: inherit;
+}
+
+/* Responsive adjustments */
+@media (max-width: 720px) {
+  .win95-window {
+    width: 100vw;
+    height: 100vh;
+    max-height: none;
+    border: none;
+  }
+  .quests-container {
+    flex-direction: column;
+  }
+  .quests-list {
+    width: 100%;
+  }
+  .led-display {
+    font-size: 18px;
+    min-width: 55px;
+  }
+}
