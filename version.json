@@ -1,16 +1,19 @@
 {
-  "version": "1.4.2",
-  "build": "20261008.1730",
-  "releaseDate": "2026-10-08 17:30",
+  "version": "1.5.0",
+  "build": "20261008.2100",
+  "releaseDate": "2026-10-08 21:00",
   "features": [
-    "Natychmiastowe 1x PPM flagowanie bez konieczności przeciągania myszką (rozwiązanie konfliktu mousedown i contextmenu)",
-    "Super-czytelne neonowe cyfry saperowe (neonowy szmaragd #00e676 dla 2, wyrazisty czarny kontur) widoczne na każdym podłożu",
-    "Wyśrodkowany marker kilofa ⛏️ oraz pozostawanie saperów na odkrytych kafelkach po zakończeniu prac",
-    "3 nowe jasne motywy graficzne: Jasny Pergamin, Soczysta Łąka oraz Lazurowy Błękit",
-    "Powiększone czcionki i kafelki (48px) zapewniające krystaliczną czytelność i więcej miejsca na grafiki",
-    "Interaktywny Przewodnik Pioniera, samouczek krok po kroku oraz wyskakujące wyjaśnienia pierwszych odkryć z opcją resetu",
-    "Inspektor kafelka w prawym dolnym rogu z dynamiczną miniaturką 48x48, koordynatami i opisem akcji/bonusów",
-    "3 poziomy trudności (Początkujący 10% min, Standardowy 15% min, Ekspert 21% min) wybierane w belce menu",
-    "Płynny zoom kółkiem myszy (scroll wheel) bezpośrednio nad minimapą z synchronizacją podglądu kamery"
+    "⛵ Żyjący Ocean: Karawele pływające wzdłuż morskich szlaków oraz delfiny 🐬 wyskakujące łukami z wody z realistycznymi rozbryzgami",
+    "🚫 Uczciwy system flag (Anti-Cheat): Usunięto natychmiastowe +0.1 pkt za flagowanie; dokładność i punkty naliczane wyłącznie po ukończeniu meczu",
+    "🎯 Wyśrodkowane flagi na kafelkach: Czerwone, złote oraz klasyczne flagi umiejscowione idealnie w centrum kafelka 48x48",
+    "👑 Profil Dowódcy & 8 Awatarów: 3 męskie (Król Artur 🧙‍♂️, Książę Jan 🤴, Kapitan Drake 🤠), 3 żeńskie (Królowa Wiktoria 👸, Elen 🧝‍♀️, Isabella 👩‍✈️) oraz 2 roboty (Cyber RX-9 🤖, Mecha-01 🦾)",
+    "🏹 6 Plemion Indian: Irokezi, Siuksowie, Komancze, Majowie, Algonkini, Apacze; przyjazny zwiad periodycznie odkrywa bezpieczne prowincje",
+    "🔨 Budowa Obiektów z Palety: Chata (zwiad bezpiecznych sąsiadów), Koszary (+1 saper i zwiad), Wieża (odsłania obszar w promieniu 2), Targ (+złoto i tańszy handel), Farma (+złoto), Mur (obrona), Cud Świata (odsłania 4 prowincje i pieczęcie)",
+    "🇵🇱 Autentyczna Mapa Polski: Realny kontur z Morzem Bałtyckim, Pojezierzem Mazurskim, Karpatami i lądowaniem na plaży bałtyckiej",
+    "🌲 Lądowe szlaki jednostek: Saperzy i robotnicy nie chodzą po głębokiej wodzie; baza rozbudowuje obejście o ogniska, namioty i sady co 2% postępu",
+    "💣 Dokładny licznik min: Pokazuje stan min pozostałych (wszystkie minus postawione flagi, np. 28/35) w belce stanu oraz tytule okna",
+    "⚡ Odblokowywanie Bohaterów: Start z 1 talentem; odblokowanie 2. Bohatera i drugiego slotu talentu po odkryciu pierwszych 50 kafelków",
+    "🔄 Bezpieczny Restart Misji: Reset planszy i start od zera z modalnym potwierdzeniem",
+    "🖥️ Wysoki kontrast w motywie Windows 95: Ciemne tło paska stanu, świecące cyfry LED i pełnoekranowy tryb Full HD"
   ]
 }

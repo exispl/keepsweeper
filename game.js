@@ -2,6 +2,101 @@
 // Engine 1: Sid Meier's Colonization & Civilization Continental Realm
 // Engine 2: Pure Classic Windows 95 Minesweeper (Saper)
 
+// --- Ray-Casting Point-in-Polygon Algorithm ---
+function isPointInPolygon(px, py, vertices) {
+  let inside = false;
+  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+    const xi = vertices[i][0], yi = vertices[i][1];
+    const xj = vertices[j][0], yj = vertices[j][1];
+    const intersect = ((yi > py) !== (yj > py)) &&
+                      (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+// --- Continental Silhouette Geometry Database ---
+const CONTINENT_DATABASE = {
+  polska: {
+    name: 'Polska',
+    icon: '🇵🇱',
+    polygon: [
+      [0.10, 0.22], // Świnoujście / Uznam
+      [0.25, 0.14], // Wybrzeże Zachodnie (Kołobrzeg)
+      [0.44, 0.08], // Wybrzeże Środkowe (Ustka / Łeba)
+      [0.54, 0.06], // Półwysep Helski nasada (Władysławowo)
+      [0.60, 0.10], // Cypel Helu
+      [0.56, 0.15], // Zatoka Gdańska
+      [0.64, 0.13], // Mierzeja Wiślana
+      [0.72, 0.14], // Warmia & Braniewo
+      [0.86, 0.14], // Suwalszczyzna (Trójstyk)
+      [0.93, 0.24], // Sejny / Augustów
+      [0.94, 0.38], // Podlasie / Białystok
+      [0.89, 0.52], // Bug / Brześć
+      [0.90, 0.68], // Zamojszczyzna
+      [0.86, 0.86], // Bieszczady Wschodnie
+      [0.80, 0.92], // Bieszczady (Opołonek)
+      [0.68, 0.89], // Beskid Niski
+      [0.56, 0.96], // Tatry (Rysy / Zakopane)
+      [0.45, 0.88], // Beskid Śląski
+      [0.38, 0.82], // Brama Morawska / Racibórz
+      [0.26, 0.88], // Kotlina Kłodzka (charakterystyczne wcięcie)
+      [0.22, 0.78], // Sudety Środkowe
+      [0.16, 0.74], // Karkonosze
+      [0.12, 0.64], // Zgorzelec / Nysa Łużycka
+      [0.10, 0.50], // Gubin / Krosno Odrzańskie
+      [0.06, 0.38], // Cedynia / Zakole Odry
+      [0.08, 0.28]  // Zalew Szczeciński
+    ]
+  },
+  afryka: {
+    name: 'Afryka',
+    icon: '🌍',
+    polygon: [
+      [0.28, 0.14], [0.55, 0.15], [0.75, 0.20], [0.82, 0.28],
+      [0.92, 0.44], [0.82, 0.60], [0.70, 0.76], [0.58, 0.94],
+      [0.44, 0.80], [0.40, 0.62], [0.32, 0.52], [0.12, 0.46],
+      [0.08, 0.34], [0.15, 0.22]
+    ]
+  },
+  europa: {
+    name: 'Europa',
+    icon: '🌍',
+    polygon: [
+      [0.40, 0.08], [0.60, 0.12], [0.88, 0.25], [0.85, 0.60],
+      [0.70, 0.75], [0.56, 0.82], [0.48, 0.68], [0.22, 0.86],
+      [0.20, 0.54], [0.30, 0.44], [0.38, 0.26]
+    ]
+  },
+  ameryka_pld: {
+    name: 'Ameryka Południowa',
+    icon: '🌎',
+    polygon: [
+      [0.28, 0.12], [0.48, 0.10], [0.70, 0.18], [0.92, 0.38],
+      [0.80, 0.60], [0.65, 0.74], [0.50, 0.86], [0.42, 0.96],
+      [0.34, 0.78], [0.30, 0.58], [0.20, 0.38], [0.18, 0.22]
+    ]
+  },
+  ameryka_pln: {
+    name: 'Ameryka Północna',
+    icon: '🌎',
+    polygon: [
+      [0.12, 0.16], [0.40, 0.10], [0.70, 0.14], [0.90, 0.28],
+      [0.82, 0.52], [0.86, 0.68], [0.66, 0.74], [0.56, 0.92],
+      [0.38, 0.82], [0.22, 0.62], [0.18, 0.40], [0.14, 0.28]
+    ]
+  },
+  australia: {
+    name: 'Australia',
+    icon: '🌏',
+    polygon: [
+      [0.25, 0.18], [0.48, 0.14], [0.58, 0.24], [0.78, 0.18],
+      [0.90, 0.45], [0.88, 0.72], [0.76, 0.86], [0.58, 0.80],
+      [0.36, 0.82], [0.14, 0.64], [0.10, 0.40], [0.16, 0.26]
+    ]
+  }
+};
+
 class KeepsweeperGame {
   constructor() {
     this.canvas = document.getElementById('gameCanvas');
@@ -31,14 +126,46 @@ class KeepsweeperGame {
     }));
     this.matchHistory = JSON.parse(localStorage.getItem('ks_match_history') || '[]');
     this.activeCommander = localStorage.getItem('ks_commander') || 'Arthur';
+    this.commanderName = localStorage.getItem('ks_commander_name') || 'Król Artur';
+    this.commanderAvatar = localStorage.getItem('ks_commander_avatar') || '🧙‍♂️';
+    this.unlockedHeroSlots = parseInt(localStorage.getItem('ks_hero_slots') || '1', 10);
 
-    // Session State
+    // Session State & Continental Map System
     this.mode = 'dragon';
     this.level = 1;
     this.difficulty = localStorage.getItem('ks_difficulty') || 'intermediate'; // 'beginner', 'intermediate', 'expert'
+    this.selectedContinent = localStorage.getItem('ks_continent') || 'polska';
+    this.continentRotationList = ['polska', 'afryka', 'europa', 'ameryka_pld', 'ameryka_pln', 'australia'];
+    this.continentRotationIndex = 0;
+    this.activeContinentKey = 'polska';
+    this.activeContinentName = 'Polska';
+    this.activeContinentIcon = '🇵🇱';
+
+    // Living Ocean & Colony Evolution System
+    this.oceanShips = [];
+    this.dolphins = [];
+    this.waterSplashes = [];
+    this.placedBuildings = [];
+    this.settlementAdditions = [];
+    this.lastSettlementMilestonePct = 0;
+    this.totalMines = 0;
+    this.nativeScoutTimer = 45;
+    this.nativeTribes = [
+      { id: 'iroquois', name: 'Irokezi', title: 'Wielka Liga Irokezów', icon: '🏹' },
+      { id: 'sioux', name: 'Siuksowie', title: 'Lud Wielkich Równin', icon: '🪶' },
+      { id: 'comanche', name: 'Komancze', title: 'Jeźdźcy Prerii', icon: '🐎' },
+      { id: 'maya', name: 'Majowie', title: 'Mędrcy Świątyń', icon: '☀️' },
+      { id: 'algonquin', name: 'Algonkini', title: 'Strażnicy Puszczy', icon: '🌲' },
+      { id: 'apache', name: 'Apacze', title: 'Nieuchwytni Zwiadowcy', icon: '🦅' }
+    ];
+
+    // Visual Customizations (Number Fonts & Tile Frames)
+    this.numberFont = localStorage.getItem('ks_number_font') || 'montserrat';
+    this.tileFrame = localStorage.getItem('ks_tile_frame') || 'bevel';
+
     this.seenDiscoveries = JSON.parse(localStorage.getItem('ks_discoveries') || '{}');
-    this.gridWidth = 28;
-    this.gridHeight = 20;
+    this.gridWidth = 32; // Enlarged continental grid dimensions
+    this.gridHeight = 22;
     this.tileSize = 48; // Enlarged from 40 to 48 for larger tiles and more graphic detail
 
     // Economy & Tracking
@@ -142,6 +269,9 @@ class KeepsweeperGame {
 
   init() {
     Sprites.init();
+    const appWin = document.getElementById('appWindow');
+    if (appWin) appWin.classList.add('fullscreen');
+
     this.resizeCanvas();
     window.addEventListener('resize', () => {
       this.resizeCanvas();
@@ -150,6 +280,7 @@ class KeepsweeperGame {
 
     this.bindEvents();
     this.setupUI();
+    this.updateCommanderDisplay();
     this.fetchVersionInfo();
     this.startLevel(this.mode, this.level);
 
@@ -174,43 +305,78 @@ class KeepsweeperGame {
     }
   }
 
-  // --- Procedural Continental Landmass Generation ---
+  // --- Procedural Realistic Continental Landmass Generation ---
   generateContinentalMap() {
     this.grid = [];
-    const cx = this.gridWidth / 2;
-    const cy = this.gridHeight / 2;
-    const maxRadius = Math.min(cx, cy) * 0.88;
 
+    // Select Continent: Random rotation or specific choice
+    if (this.selectedContinent === 'random') {
+      this.activeContinentKey = this.continentRotationList[this.continentRotationIndex % this.continentRotationList.length];
+      this.continentRotationIndex++;
+    } else {
+      this.activeContinentKey = this.selectedContinent || 'polska';
+    }
+
+    const continentDef = CONTINENT_DATABASE[this.activeContinentKey] || CONTINENT_DATABASE.polska;
+    this.activeContinentName = continentDef.name;
+    this.activeContinentIcon = continentDef.icon;
+
+    // Update UI indicator
+    const contSelect = document.getElementById('quickContinentSelect');
+    if (contSelect && this.selectedContinent !== 'random') contSelect.value = this.activeContinentKey;
+    this.notify(`🗺️ Odkrywasz ląd: ${this.activeContinentName} ${this.activeContinentIcon}!`, '🗺️');
+
+    const marginX = 1;
+    const marginY = 1;
+
+    // 1. Generate Landmass & Organic Terrain
     for (let y = 0; y < this.gridHeight; y++) {
       const row = [];
       for (let x = 0; x < this.gridWidth; x++) {
-        // Distance-based continental island with organic harmonic bays and peninsulas
-        const dx = (x - cx) / cx;
-        const dy = (y - cy) / cy;
-        const dist = Math.hypot(dx * 1.2, dy * 1.0);
+        const nx = (x - marginX) / (this.gridWidth - 1 - 2 * marginX);
+        const ny = (y - marginY) / (this.gridHeight - 1 - 2 * marginY);
 
-        // Organic coastline disturbance
-        const angle = Math.atan2(dy, dx);
-        const noise = Math.sin(angle * 3.5 + 1.2) * 0.18 + Math.cos(angle * 6.0) * 0.12 + Math.sin(x * 0.7) * Math.cos(y * 0.7) * 0.15;
-        const continentalEdge = 0.78 + noise;
+        // Coastline organic harmonics
+        const harmonic = Math.sin(nx * 14 + ny * 10) * 0.025 + Math.cos(nx * 8 - ny * 12) * 0.02;
+        const testX = nx + harmonic;
+        const testY = ny + harmonic;
 
+        const isLand = isPointInPolygon(testX, testY, continentDef.polygon);
         let terrain = 'water';
-        if (dist < continentalEdge) {
-          // Inside the continent
-          const lakeNoise = Math.sin(x * 1.4) * Math.cos(y * 1.4);
-          const treeNoise = Math.cos(x * 0.8 + y * 0.6);
 
-          if (lakeNoise > 0.68 && dist < 0.5) {
-            terrain = 'lake';
-          } else if (treeNoise > 0.3) {
-            terrain = 'trees';
+        if (isLand) {
+          if (this.activeContinentKey === 'polska') {
+            // Authentic Polish Geography & Biomes:
+            // Bałtyk na samej północy
+            if (ny < 0.14 && nx < 0.65) {
+              terrain = 'sea';
+            }
+            // Kraina Wielkich Jezior Mazurskich (Mazury)
+            else if (nx > 0.58 && nx < 0.85 && ny > 0.15 && ny < 0.32 && (Math.sin(x * 1.7) * Math.cos(y * 1.7) > 0.42)) {
+              terrain = 'lake';
+            }
+            // Karpaty, Tatry i Sudety (Góry i gęste lasy) na południu
+            else if (ny > 0.78) {
+              terrain = 'trees';
+            }
+            // Puszcze i bory (Białowieska, Tucholskie, Kampinos)
+            else if (Math.sin(x * 0.95 + y * 0.75) > 0.40) {
+              terrain = 'trees';
+            } else {
+              terrain = 'grass'; // Żyzne niziny i polany
+            }
           } else {
-            terrain = 'grass';
+            // Generic continental biomes with organic lakes and forests
+            const lakeNoise = Math.sin(x * 1.5) * Math.cos(y * 1.5);
+            const treeNoise = Math.cos(x * 0.85 + y * 0.65);
+            if (lakeNoise > 0.65) terrain = 'lake';
+            else if (treeNoise > 0.32) terrain = 'trees';
+            else terrain = 'grass';
           }
-        } else if (dist < continentalEdge + 0.12) {
-          terrain = 'sea'; // Coastal water
         } else {
-          terrain = 'water'; // Deep ocean
+          // Surrounding sea & deep ocean
+          const isNearCoast = isPointInPolygon(testX * 0.92 + 0.04, testY * 0.92 + 0.04, continentDef.polygon);
+          terrain = isNearCoast ? 'sea' : 'water';
         }
 
         const isOcean = (terrain === 'water' || terrain === 'sea');
@@ -233,32 +399,63 @@ class KeepsweeperGame {
       this.grid.push(row);
     }
 
-    // Coastal Expedition Landing: find a coastal grass/trees tile on the southern/eastern shore
-    let kx = Math.floor(cx);
-    let ky = Math.floor(cy + maxRadius * 0.45);
-    // Find closest land tile bordering water
-    for (let y = this.gridHeight - 4; y >= 4; y--) {
-      for (let x = 6; x < this.gridWidth - 6; x++) {
-        if (this.grid[y][x].terrain === 'grass' || this.grid[y][x].terrain === 'trees') {
-          // Check if it borders sea/water
-          let hasCoast = false;
-          for (let dy = -1; dy <= 1; dy++) {
-            for (let dx = -1; dx <= 1; dx++) {
-              const ny = y + dy;
-              const nx = x + dx;
-              if (this.isValidTile(nx, ny) && (this.grid[ny][nx].terrain === 'water' || this.grid[ny][nx].terrain === 'sea')) {
-                hasCoast = true;
+    // 2. Coastal Landing Beachhead:
+    // For Poland: Land at the Baltic seaside on the north shore!
+    // For other continents: find suitable coastal landing spot
+    let kx = Math.floor(this.gridWidth / 2);
+    let ky = Math.floor(this.gridHeight / 2);
+
+    if (this.activeContinentKey === 'polska') {
+      // Find northern Baltic coastal land tile
+      for (let y = 3; y < this.gridHeight - 3; y++) {
+        for (let x = 6; x < this.gridWidth - 6; x++) {
+          const t = this.grid[y][x];
+          if (t.terrain === 'grass' || t.terrain === 'trees') {
+            // Check if borders sea/water to the north or west
+            let bordersWater = false;
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                const ny = y + dy;
+                const nx = x + dx;
+                if (this.isValidTile(nx, ny) && (this.grid[ny][nx].terrain === 'water' || this.grid[ny][nx].terrain === 'sea')) {
+                  bordersWater = true;
+                }
               }
             }
-          }
-          if (hasCoast) {
-            kx = x;
-            ky = y;
-            break;
+            if (bordersWater) {
+              kx = x;
+              ky = y;
+              break;
+            }
           }
         }
+        if (ky !== Math.floor(this.gridHeight / 2)) break;
       }
-      if (kx !== Math.floor(cx)) break;
+    } else {
+      // Find southern/eastern shore
+      for (let y = this.gridHeight - 4; y >= 4; y--) {
+        for (let x = 6; x < this.gridWidth - 6; x++) {
+          const t = this.grid[y][x];
+          if (t.terrain === 'grass' || t.terrain === 'trees') {
+            let hasCoast = false;
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                const ny = y + dy;
+                const nx = x + dx;
+                if (this.isValidTile(nx, ny) && (this.grid[ny][nx].terrain === 'water' || this.grid[ny][nx].terrain === 'sea')) {
+                  hasCoast = true;
+                }
+              }
+            }
+            if (hasCoast) {
+              kx = x;
+              ky = y;
+              break;
+            }
+          }
+        }
+        if (kx !== Math.floor(this.gridWidth / 2)) break;
+      }
     }
 
     this.playerStart = { x: kx, y: ky };
@@ -273,7 +470,7 @@ class KeepsweeperGame {
       level: 1
     };
 
-    // Initial safe beachhead around starting camp
+    // Safe 3x3 beachhead around landing camp
     for (let dy = -1; dy <= 1; dy++) {
       for (let dx = -1; dx <= 1; dx++) {
         const nx = kx + dx;
@@ -285,34 +482,49 @@ class KeepsweeperGame {
       }
     }
 
-    // Place Initial Entities
+    // 3. Place Entities SPACIALLY SEPARATED - No unit stacking!
+    const charOff = (this.tileSize - 24) / 2;
     this.workers = [
-      { x: kx * this.tileSize + 8, y: ky * this.tileSize + 8, targetX: kx * this.tileSize, targetY: ky * this.tileSize, facing: 1, walkAnim: 0 },
-      { x: kx * this.tileSize + 20, y: ky * this.tileSize + 16, targetX: kx * this.tileSize, targetY: ky * this.tileSize, facing: 1, walkAnim: 0 },
-      { x: kx * this.tileSize + 14, y: ky * this.tileSize + 24, targetX: kx * this.tileSize, targetY: ky * this.tileSize, facing: 1, walkAnim: 0 }
+      { x: (kx - 1) * this.tileSize + charOff, y: ky * this.tileSize + charOff, targetX: (kx - 1) * this.tileSize, targetY: ky * this.tileSize, facing: 1, walkAnim: 0 },
+      { x: (kx + 1) * this.tileSize + charOff, y: ky * this.tileSize + charOff, targetX: (kx + 1) * this.tileSize, targetY: ky * this.tileSize, facing: -1, walkAnim: 0 },
+      { x: kx * this.tileSize + charOff, y: (ky - 1) * this.tileSize + charOff, targetX: kx * this.tileSize, targetY: (ky - 1) * this.tileSize, facing: 1, walkAnim: 0 }
     ];
+
+    const sapperOffsets = [
+      { dx: 0, dy: 1 },
+      { dx: -1, dy: 1 },
+      { dx: 1, dy: 1 },
+      { dx: -1, dy: -1 },
+      { dx: 1, dy: -1 }
+    ];
+    const sapperNames = ['Saper Jan', 'Saper Wilhelm', 'Saper Tomasz', 'Saper Stanisław', 'Saper Tadeusz'];
 
     this.sappersList = [];
     for (let i = 0; i < this.sappers; i++) {
+      const off = sapperOffsets[i % sapperOffsets.length];
+      const sx = Math.max(0, Math.min(this.gridWidth - 1, kx + off.dx));
+      const sy = Math.max(0, Math.min(this.gridHeight - 1, ky + off.dy));
       this.sappersList.push({
         id: i + 1,
-        name: i === 0 ? 'Saper Jan' : (i === 1 ? 'Saper Wilhelm' : 'Saper Tomasz'),
-        x: kx * this.tileSize + 10 + i * 8,
-        y: ky * this.tileSize + 10,
-        targetX: kx * this.tileSize,
-        targetY: ky * this.tileSize,
-        state: 'idle', // 'idle', 'walking_to_dig', 'digging'
+        name: sapperNames[i] || `Saper #${i + 1}`,
+        x: sx * this.tileSize + charOff,
+        y: sy * this.tileSize + charOff,
+        targetX: sx * this.tileSize,
+        targetY: sy * this.tileSize,
+        state: 'idle',
         digTile: null,
-        facing: 1,
+        facing: off.dx < 0 ? -1 : 1,
         walkAnim: 0
       });
     }
 
-    // Volcanic Dragon Caves in deep mountains/forests
+    // 4. Volcanic Dragon Caves in deep regions
     const caveCount = Math.max(1, Math.min(3, Math.floor(this.level / 2)));
     for (let c = 0; c < caveCount; c++) {
       let placed = false;
-      while (!placed) {
+      let attempts = 0;
+      while (!placed && attempts < 100) {
+        attempts++;
         const rx = Math.floor(Math.random() * this.gridWidth);
         const ry = Math.floor(Math.random() * this.gridHeight);
         const dist = Math.hypot(rx - kx, ry - ky);
@@ -325,27 +537,32 @@ class KeepsweeperGame {
       }
     }
 
-    // Native Tribal Wigwams (Civ 1 style villages)
-    const wigwamCount = Math.max(2, Math.floor(this.level / 2));
+    // 5. Native Tribal Wigwams (Civ 1 style villages)
+    const wigwamCount = Math.max(3, Math.floor(this.level / 2) + 2);
     for (let w = 0; w < wigwamCount; w++) {
       let placed = false;
-      while (!placed) {
+      let attempts = 0;
+      while (!placed && attempts < 100) {
+        attempts++;
         const rx = Math.floor(Math.random() * this.gridWidth);
         const ry = Math.floor(Math.random() * this.gridHeight);
         const dist = Math.hypot(rx - kx, ry - ky);
         const t = this.grid[ry][rx];
-        if (dist > 4 && t.terrain === 'grass' && t.covered && !t.danger) {
+        if (dist > 3 && t.terrain === 'grass' && t.covered && !t.danger && !t.dangerType) {
           t.dangerType = 'wigwam';
           placed = true;
         }
       }
     }
 
-    // Hidden Gold Chests & Relics
-    const chestCount = Math.max(3, Math.floor(this.level * 1.5)) * (this.activeHeroPerk === 'prospector' ? 2 : 1);
+    // 6. User Request: SIGNIFICANTLY INCREASED TREASURE CHEST SPAWN CHANCE!
+    const totalLandTiles = this.grid.flat().filter(t => t.terrain !== 'water' && t.terrain !== 'sea').length;
+    const chestCount = Math.max(10, Math.floor(totalLandTiles * 0.055)) * (this.activeHeroPerk === 'prospector' ? 2 : 1);
     for (let ch = 0; ch < chestCount; ch++) {
       let placed = false;
-      while (!placed) {
+      let attempts = 0;
+      while (!placed && attempts < 100) {
+        attempts++;
         const rx = Math.floor(Math.random() * this.gridWidth);
         const ry = Math.floor(Math.random() * this.gridHeight);
         const t = this.grid[ry][rx];
@@ -356,11 +573,13 @@ class KeepsweeperGame {
       }
     }
 
-    // Goblin Portals
+    // 7. Goblin Portals
     const portalCount = Math.min(3, 1 + Math.floor(this.level / 3));
     for (let p = 0; p < portalCount; p++) {
       let placed = false;
-      while (!placed) {
+      let attempts = 0;
+      while (!placed && attempts < 100) {
+        attempts++;
         const rx = Math.floor(Math.random() * this.gridWidth);
         const ry = Math.floor(Math.random() * this.gridHeight);
         const dist = Math.hypot(rx - kx, ry - ky);
@@ -373,10 +592,9 @@ class KeepsweeperGame {
       }
     }
 
-    // Mines & Traps Quota (based on 3 difficulty levels: beginner 10%, intermediate 15%, expert 21%)
+    // 8. Mines & Traps Quota
     const baseDensity = this.difficulty === 'beginner' ? 0.10 : (this.difficulty === 'expert' ? 0.21 : 0.15);
     const dangerDensity = baseDensity + (this.level * 0.003);
-    const totalLandTiles = this.grid.flat().filter(t => t.terrain !== 'water' && t.terrain !== 'sea').length;
     let mineQuota = Math.floor(totalLandTiles * dangerDensity);
 
     while (mineQuota > 0) {
@@ -384,20 +602,75 @@ class KeepsweeperGame {
       const ry = Math.floor(Math.random() * this.gridHeight);
       const dist = Math.hypot(rx - kx, ry - ky);
       const t = this.grid[ry][rx];
-      if (dist > 2.5 && t.covered && (t.terrain === 'grass' || t.terrain === 'trees') && !t.danger && !t.dangerType) {
+      if (dist > 2.2 && t.covered && (t.terrain === 'grass' || t.terrain === 'trees') && !t.danger && !t.dangerType) {
         t.danger = true;
         t.dangerType = 'mine';
         mineQuota--;
       }
     }
 
-    // Position AI Rivals on opposing continental shores
-    this.aiRivals.spain.x = Math.max(2, kx - 14);
-    this.aiRivals.spain.y = Math.max(2, ky - 10);
-    this.aiRivals.france.x = Math.min(this.gridWidth - 3, kx + 12);
-    this.aiRivals.france.y = Math.max(2, ky - 8);
+    // 9. AI Rivals on opposing continental shores
+    this.aiRivals.spain.x = Math.max(2, kx - 12);
+    this.aiRivals.spain.y = Math.max(2, ky - 8);
+    this.aiRivals.france.x = Math.min(this.gridWidth - 3, kx + 10);
+    this.aiRivals.france.y = Math.max(2, ky - 6);
 
     this.recalculateAdjacentNumbers();
+
+    // Total mines quota count for UI
+    this.totalMines = this.grid.flat().filter(t => t.danger).length;
+
+    // Open starting clearing around landing camp until boundary numbers are revealed
+    const openQueue = [{ x: kx, y: ky }];
+    const visitedOpening = new Set([`${kx},${ky}`]);
+    while (openQueue.length > 0) {
+      const cur = openQueue.shift();
+      const curTile = this.grid[cur.y][cur.x];
+      curTile.covered = false;
+      if (curTile.adjacentDangers === 0) {
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = cur.x + dx;
+            const ny = cur.y + dy;
+            const key = `${nx},${ny}`;
+            if (this.isValidTile(nx, ny) && !visitedOpening.has(key)) {
+              visitedOpening.add(key);
+              const nTile = this.grid[ny][nx];
+              if (!nTile.danger && nTile.terrain !== 'water' && nTile.terrain !== 'sea') {
+                nTile.covered = false;
+                if (nTile.adjacentDangers === 0) {
+                  openQueue.push({ x: nx, y: ny });
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Initialize Living Ocean (Sailing Caravels)
+    this.oceanShips = [];
+    const waterTiles = this.grid.flat().filter(t => t.terrain === 'water' || t.terrain === 'sea');
+    if (waterTiles.length > 5) {
+      for (let s = 0; s < 3; s++) {
+        const startT = waterTiles[Math.floor(Math.random() * waterTiles.length)];
+        const targetT = waterTiles[Math.floor(Math.random() * waterTiles.length)];
+        this.oceanShips.push({
+          x: startT.x * this.tileSize + 8,
+          y: startT.y * this.tileSize + 8,
+          targetX: targetT.x * this.tileSize + 8,
+          targetY: targetT.y * this.tileSize + 8,
+          speed: 16 + Math.random() * 12,
+          angle: 0,
+          bobbing: Math.random() * Math.PI * 2
+        });
+      }
+    }
+    this.dolphins = [];
+    this.waterSplashes = [];
+    this.placedBuildings = [];
+    this.settlementAdditions = [];
+    this.lastSettlementMilestonePct = 0;
   }
 
   recalculateAdjacentNumbers() {
@@ -547,9 +820,18 @@ class KeepsweeperGame {
       }
     });
 
-    // 1x PPM: Prevent contextmenu completely without calling handlePointerDown again!
+    // 1x PPM: Prevent native browser context menu globally across the whole game window
+    window.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      return false;
+    }, { capture: true });
+    document.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      return false;
+    }, { capture: true });
     this.canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
+      return false;
     });
 
     // Zoom on wheel (game canvas)
@@ -629,26 +911,21 @@ class KeepsweeperGame {
     if (!this.isValidTile(tx, ty)) return;
     const tile = this.grid[ty][tx];
 
-    // 1x Right-Click or Touch Flag Mode: Instantly Toggles Flag
+    // 1x Right-Click or Touch Flag Mode: Instantly Toggles Flag (Fair Anti-Cheat: No score spoilers!)
     if (button === 2 || (button === 0 && this.flagMode)) {
       if (tile.covered) {
         tile.flagged = !tile.flagged;
         this.movesCount++;
         if (tile.flagged) {
-          this.triggerDiscovery('first_flag', 'Oflagowanie Terenu', '🚩', 'Oflagowano pole podejrzane o minę! Za każdą poprawnie postawioną flagę otrzymujesz +0.1 punktu. Gdy liczba flag wokół odkrytego pola zgadza się z cyfrą, kliknięcie wykonuje Chord i odsłania resztę sąsiadów.');
-          if (tile.danger) {
-            // Correct flag placed on danger/mine: +0.1 point!
-            this.score = Math.round((this.score + 0.1) * 10) / 10;
-            tile.accuracyScored = true;
-            this.addFloatingText('+0.1 pkt 🎯', tx * this.tileSize + 20, ty * this.tileSize - 10, '#00e676');
-            this.notify('🎯 Trafna flaga na minie! Przyznano +0.1 punktu prestiżu!', '🚩');
+          if (!this.seenDiscoveries['first_flag']) {
+            this.seenDiscoveries['first_flag'] = true;
+            localStorage.setItem('ks_discoveries', JSON.stringify(this.seenDiscoveries));
+            this.notify('🚩 Oflagowano podejrzane pole jako potencjalną minę!', '🚩');
           }
+          this.addFloatingText('🚩 Flaga', tx * this.tileSize + 20, ty * this.tileSize - 10, '#ffd54f');
+          this.notify(`🚩 Postawiono flagę na pozycji [${tx} x ${ty}].`, '🚩');
         } else {
-          // Flag removed: deduct if previously scored
-          if (tile.accuracyScored) {
-            this.score = Math.max(0, Math.round((this.score - 0.1) * 10) / 10);
-            tile.accuracyScored = false;
-          }
+          this.addFloatingText('Zdjęto flagę', tx * this.tileSize + 20, ty * this.tileSize - 10, '#cfd8dc');
         }
         sfx.playFlag();
         this.updateUI();
@@ -836,6 +1113,43 @@ class KeepsweeperGame {
     // Tutorial: First safe tile discovery
     this.triggerDiscovery('first_tile', 'Pionierski Wykop', '⛏️', 'Odkryto pierwsze bezpieczne pole! Cyfry wskazują liczbę min ukrytych na sąsiednich 8 polach. Jeśli cyfra wynosi 0, teren odsłania się kaskadowo.');
 
+    // 2nd Hero Unlock at 50 uncovered tiles!
+    if (this.uncoveredCount >= 50 && this.unlockedHeroSlots < 2) {
+      this.unlockedHeroSlots = 2;
+      localStorage.setItem('ks_hero_slots', '2');
+      sfx.playVictory();
+      this.addFloatingText('🌟 2. BOHATER ODBLOKOWANY!', tx * this.tileSize + 20, ty * this.tileSize - 25, '#ffd700');
+      this.triggerDiscovery('second_hero', 'Odblokowano Drugiego Bohatera!', '🌟', 'Wspaniałe osiągnięcie! Po odkryciu pierwszych 50 pól Nowego Świata powołałeś drugiego bohatera kolonii! Zyskałeś drugi slot na potężny talent w oknie SuperBohatera (⚡).');
+      this.notify('🌟 50 kafelków odkrytych! Powołano drugiego bohatera i odblokowano 2. slot talentu!', '🌟');
+    }
+
+    // Colony Living Growth: Expand settlement additions every 2% map progress
+    const totalLand = this.grid.flat().filter(t => t.terrain !== 'water' && t.terrain !== 'sea').length;
+    const progressPct = Math.floor((this.uncoveredCount / Math.max(1, totalLand)) * 100);
+    if (progressPct >= this.lastSettlementMilestonePct + 2) {
+      this.lastSettlementMilestonePct = Math.floor(progressPct / 2) * 2;
+      this.expandColonySettlement();
+    }
+
+    // Active placed buildings periodic benefits
+    if (this.placedBuildings && this.placedBuildings.length > 0) {
+      // Houses: every 10 tiles, scout a random adjacent safe tile
+      if (this.uncoveredCount % 10 === 0 && this.placedBuildings.some(b => b.type === 'house')) {
+        this.scoutHouseNeighborSafeTile();
+      }
+      // Barracks: every 25 tiles, clear 2 tiles
+      if (this.uncoveredCount % 25 === 0 && this.placedBuildings.some(b => b.type === 'barracks')) {
+        this.autoRevealRandomSafeTile();
+        this.autoRevealRandomSafeTile();
+        this.notify('🛡️ Koszary wojskowe dokonały zwiadu i zabezpieczyły 2 prowincje!', '🛡️');
+      }
+      // Market: gives +10 gold every 10 tiles
+      if (this.uncoveredCount % 10 === 0 && this.placedBuildings.some(b => b.type === 'market')) {
+        this.resources += 10;
+        this.addFloatingText('+10 💰 Targ', tx * this.tileSize + 20, ty * this.tileSize - 10, '#ffd700');
+      }
+    }
+
     // Hero progression: unlock a new hero ability / level every 10 uncovered tiles!
     const currentMilestone = Math.floor(this.uncoveredCount / 10);
     if (currentMilestone > this.lastHeroMilestone && this.uncoveredCount >= 10) {
@@ -855,9 +1169,10 @@ class KeepsweeperGame {
       this.triggerDiscovery('first_hero', 'Awans Bohatera', '🌟', 'Twój Bohater zdobywa poziomy za każde 10 odkrytych pól lub trafne flagowanie! Możesz aktywować unikalne talenty w oknie Bohatera (⚡) na dolnym pasku.');
     }
 
-    // Resources increase for revealed tiles!
+    // Resources increase for revealed tiles (+1 extra if farm built)!
     const midasBonus = this.activeHeroPerk === 'midas_touch' ? 1.5 : 1.0;
-    const goldEarned = Math.round(2 * midasBonus);
+    const farmBonus = (this.placedBuildings && this.placedBuildings.some(b => b.type === 'farm')) ? 1 : 0;
+    const goldEarned = Math.round((2 + farmBonus) * midasBonus);
     this.resources += goldEarned;
     this.addFloatingText(`+${goldEarned} 💰`, tx * this.tileSize + 20, ty * this.tileSize + 10, '#ffd700');
 
@@ -1005,49 +1320,80 @@ class KeepsweeperGame {
 
     if (coordsTag) coordsTag.textContent = `${tx} x ${ty}`;
 
-    let terrainName = 'Równiny Kolonii';
-    let icon = '🌾';
-    let dangerText = 'Teren bezpieczny';
-    let bonuses = ['💰 Złoto: +2', '🌾 Żywność: +2'];
-
-    if (tile.terrain === 'trees') {
-      terrainName = 'Gęsty Las Sosnowy';
-      icon = '🌲';
-      bonuses = ['🌲 Drewno: +2', '💰 Złoto: +1', '🛡️ Obrona: +25%'];
-    } else if (tile.terrain === 'water' || tile.terrain === 'sea') {
-      terrainName = 'Szlak Morski / Wybrzeże';
-      icon = '🌊';
-      bonuses = ['🐟 Połów Ryb: +3', '🚢 Transport Morski'];
-    } else if (tile.terrain === 'lake') {
-      terrainName = 'Jezioro Śródlądowe';
-      icon = '💧';
-      bonuses = ['🐟 Słodka Woda: +2', '🌾 Nawodnienie: +2'];
-    }
+    let terrainName = '';
+    let icon = '';
+    let dangerText = '';
+    let bonuses = [];
+    let actionDesc = '';
 
     if (tile.covered) {
-      dangerText = tile.flagged ? '🚩 Oflagowane (podejrzenie miny)' : '❓ Niezbadany ląd (Zagrożenie: 0-3 miny)';
+      // User request: Jak pole szare jest nieodkryte to NIE POKAZUJ co jest pod tym!
+      terrainName = tile.flagged ? 'Oflagowany Teren' : 'Niezbadany Ląd (Mgła Wojny)';
+      icon = tile.flagged ? '🚩' : '❓';
+      dangerText = tile.flagged ? '🚩 Podejrzenie miny (Oznaczone)' : '❓ Ryzyko min (Mgła Wojny)';
+      bonuses = ['🌫️ Surowce ukryte pod mgłą', '⛏️ Wyślij sapera, aby odkryć'];
+      actionDesc = tile.flagged
+        ? '<b>Pole oflagowane:</b> Podejrzenie miny. Kliknij 1x PPM, aby zdjąć flagę.'
+        : '<b>Niezbadany ląd:</b> Kliknij LPM, aby zlecić saperowi wykop. 1x PPM stawia flagę.';
     } else {
-      dangerText = tile.adjacentDangers > 0 ? `⚠️ Zagrożenie: ${tile.adjacentDangers} sąsiednie miny` : '✅ Teren oczyszczony';
-    }
+      // Tylko gdy pole jest faktycznie odkryte (nie-szare) ujawniamy surowce, teren i skarby!
+      if (tile.dangerType === 'chest') {
+        terrainName = 'Starożytna Skrzynia Złota';
+        icon = '💎';
+        dangerText = '✅ Skarb odkryty!';
+        bonuses = ['💰 Skarb: 70-120 złota', '👑 Prestiż Królestwa'];
+        actionDesc = '<b>Starożytny Skarb:</b> Odkopano złoto! Zasiliło skarbiec Twojej ekspedycji.';
+      } else if (tile.dangerType === 'wigwam') {
+        terrainName = 'Wioska Indian (Tubylcy)';
+        icon = '🏕️';
+        dangerText = '✅ Sojusz z tubylcami';
+        bonuses = ['💰 Dar Złota: +80', '👑 Pieczęcie Królewskie: +2'];
+        actionDesc = '<b>Wioska Tubylcza:</b> Sojusz z Indianami. Ofiarowano złoto i Królewskie Pieczęcie 👑.';
+      } else if (tile.dangerType === 'dragon_nest') {
+        terrainName = 'Volcan Jaskinia Smoka';
+        icon = '🐉';
+        dangerText = '💥 Śmiertelne Niebezpieczeństwo';
+        bonuses = ['💥 Siedlisko Bestii', '💣 Wymaga Katapulty lub Wyroczni'];
+        actionDesc = '<b>Jaskinia Smoka:</b> Użyj Katapulty lub Wyroczni z paska mocy!';
+      } else if (tile.crater) {
+        terrainName = 'Krater po Wybuchu';
+        icon = '💥';
+        dangerText = 'Oczyszczone (po detonacji)';
+        bonuses = ['🧱 Gruz i popiół'];
+        actionDesc = '<b>Krater Wybuchu:</b> Pozostałość po zdetonowanej minie.';
+      } else if (tile.terrain === 'trees') {
+        terrainName = 'Gęsty Las Sosnowy';
+        icon = '🌲';
+        dangerText = tile.adjacentDangers > 0 ? `⚠️ Zagrożenie: ${tile.adjacentDangers} sąsiednie miny` : '✅ Teren oczyszczony';
+        bonuses = ['🌲 Drewno: +2', '💰 Złoto: +1', '🛡️ Obrona: +25%'];
+        actionDesc = tile.adjacentDangers > 0 ? `<b>Bezpieczny Las:</b> Sąsiaduje z ${tile.adjacentDangers} minami.` : '<b>Oczyszczony Las:</b> Bezpieczna polana.';
+      } else if (tile.terrain === 'water' || tile.terrain === 'sea') {
+        terrainName = 'Szlak Morski / Wybrzeże';
+        icon = '🌊';
+        dangerText = '✅ Woda bezpieczna';
+        bonuses = ['🐟 Połów Ryb: +3', '🚢 Transport Morski'];
+        actionDesc = '<b>Szlak Morski:</b> Naturalne wody oceanu. Bezpieczna, otwarta przestrzeń.';
+      } else if (tile.terrain === 'lake') {
+        terrainName = 'Jezioro Śródlądowe';
+        icon = '💧';
+        dangerText = '✅ Słodka woda';
+        bonuses = ['🐟 Słodka Woda: +2', '🌾 Nawodnienie: +2'];
+        actionDesc = '<b>Jezioro:</b> Naturalny zbiornik słodkiej wody.';
+      } else {
+        terrainName = 'Równiny Kolonii';
+        icon = '🌾';
+        dangerText = tile.adjacentDangers > 0 ? `⚠️ Zagrożenie: ${tile.adjacentDangers} sąsiednie miny` : '✅ Teren oczyszczony';
+        bonuses = ['💰 Złoto: +2', '🌾 Żywność: +2'];
+        actionDesc = tile.adjacentDangers > 0
+          ? `<b>Bezpieczna Ziemia:</b> Sąsiaduje z ${tile.adjacentDangers} minami. Kliknij cyfrę, aby natychmiast odsłonić bezpiecznych sąsiadów!`
+          : '<b>Oczyszczony Teren:</b> Brak min w bezpośrednim sąsiedztwie.';
+      }
 
-    if (tile.dangerType === 'chest') {
-      terrainName = 'Starożytna Skrzynia Złota';
-      icon = '💎';
-      bonuses = ['💰 Skarb: 70-120 złota', '👑 Prestiż Królestwa'];
-    } else if (tile.dangerType === 'wigwam') {
-      terrainName = 'Wioska Indian (Tubylcy)';
-      icon = '🏕️';
-      bonuses = ['💰 Dar Złota: +80', '👑 Pieczęcie Królewskie: +2'];
-    } else if (tile.dangerType === 'dragon_nest') {
-      terrainName = 'Volcan Jaskinia Smoka';
-      icon = '🐉';
-      bonuses = ['💥 Śmiertelne Niebezpieczeństwo', '💣 Wymaga Katapulty lub Wyroczni'];
-    }
-
-    if (tile.building) {
-      terrainName = `Osada: ${tile.building.type.toUpperCase()}`;
-      icon = '🏰';
-      bonuses.push('👷 Dochód Kolonialny');
+      if (tile.building) {
+        terrainName = `Osada: ${tile.building.type.toUpperCase()}`;
+        icon = '🏰';
+        bonuses.push('👷 Dochód Kolonialny');
+      }
     }
 
     if (nameEl) nameEl.textContent = terrainName;
@@ -1094,32 +1440,6 @@ class KeepsweeperGame {
         tctx.strokeText(tile.adjacentDangers.toString(), 24, 24);
         tctx.fillStyle = '#00e676';
         tctx.fillText(tile.adjacentDangers.toString(), 24, 24);
-      }
-    }
-
-    // Wyjaśnienie: co robi to pole?
-    let actionDesc = '<b>Działanie:</b> LPM = Rozkaz wykopu | 1x PPM = Postaw flagę.';
-    if (tile.covered) {
-      if (tile.flagged) {
-        actionDesc = '<b>Oflagowane pole:</b> Podejrzenie miny. Kliknij 1x PPM, aby zdjąć flagę.';
-      } else {
-        actionDesc = '<b>Niezbadany ląd:</b> Kliknij LPM, aby wysłać sapera. 1x PPM stawia flagę (+0.1 pkt jeśli trafna!).';
-      }
-    } else {
-      if (tile.dangerType === 'chest') {
-        actionDesc = '<b>Skarb Złota:</b> Odkopano bogatą skrzynię! Złoto zasiliło skarbiec królestwa.';
-      } else if (tile.dangerType === 'wigwam') {
-        actionDesc = '<b>Wioska Tubylcza:</b> Sojusz z Indianami. Ofiarowano złoto i Królewskie Pieczęcie 👑.';
-      } else if (tile.dangerType === 'dragon_nest') {
-        actionDesc = '<b>Jaskinia Smoka:</b> Śmiertelne niebezpieczeństwo! Użyj Katapulty lub Wyroczni z paska mocy.';
-      } else if (tile.crater) {
-        actionDesc = '<b>Krater Wybuchu:</b> Pozostałość po zdetonowanej minie.';
-      } else if (tile.terrain === 'water' || tile.terrain === 'sea') {
-        actionDesc = '<b>Szlak Morski:</b> Naturalne wody oceanu. Bezpieczna, otwarta przestrzeń.';
-      } else {
-        actionDesc = tile.adjacentDangers > 0
-          ? `<b>Bezpieczna Ziemia:</b> Sąsiaduje z ${tile.adjacentDangers} minami. Kliknij (Chord), aby odsłonić resztę!`
-          : '<b>Oczyszczony Teren:</b> Brak min w bezpośrednim sąsiedztwie.';
       }
     }
 
@@ -1303,11 +1623,194 @@ class KeepsweeperGame {
       this.notify('⛪ Błogosławieństwo Mnicha: Nowy Saper dołączył do Twojej kolonii!', '⛪');
     }
 
+    // Native Indian Tribal Scout exploration event (every ~45s)
+    this.nativeScoutTimer = (this.nativeScoutTimer || 45) - 1;
+    if (this.nativeScoutTimer <= 0) {
+      this.nativeScoutTimer = 35 + Math.floor(Math.random() * 25);
+      this.triggerNativeScoutEvent();
+    }
+
     // Cooldown reductions
     Object.keys(this.powerCooldowns).forEach(k => {
       if (this.powerCooldowns[k] > 0) this.powerCooldowns[k]--;
     });
 
+    this.updateUI();
+  }
+
+  // 6 Native Indian Tribes Periodic Safe Scout Event
+  triggerNativeScoutEvent() {
+    const tribes = this.nativeTribes || [
+      { name: 'Irokezi', icon: '🏹' },
+      { name: 'Siuksowie', icon: '🪶' },
+      { name: 'Komancze', icon: '🐎' },
+      { name: 'Majowie', icon: '☀️' },
+      { name: 'Algonkini', icon: '🌲' },
+      { name: 'Apacze', icon: '🦅' }
+    ];
+    const tribe = tribes[Math.floor(Math.random() * tribes.length)];
+
+    // Find a random safe covered land tile
+    const safeCovered = [];
+    for (let y = 0; y < this.gridHeight; y++) {
+      for (let x = 0; x < this.gridWidth; x++) {
+        const t = this.grid[y][x];
+        if (t.covered && !t.danger && (t.terrain === 'grass' || t.terrain === 'trees')) {
+          safeCovered.push({ x, y });
+        }
+      }
+    }
+
+    if (safeCovered.length > 0) {
+      const chosen = safeCovered[Math.floor(Math.random() * safeCovered.length)];
+      this.uncoverSafeTile(chosen.x, chosen.y);
+      sfx.playRecruit();
+      this.addFloatingText(`${tribe.icon} Zwiad ${tribe.name}!`, chosen.x * this.tileSize + 20, chosen.y * this.tileSize - 10, '#ffd54f');
+      this.notify(`${tribe.icon} Przyjazny zwiad plemienia ${tribe.name} bezpiecznie zbadał i odsłonił sektor [${chosen.x}x${chosen.y}]!`, tribe.icon);
+    }
+  }
+
+  // Living Colony Additions (trees, campfires, tents, fences every 2% progress)
+  expandColonySettlement() {
+    const kx = this.playerStart ? this.playerStart.x : Math.floor(this.gridWidth / 2);
+    const ky = this.playerStart ? this.playerStart.y : Math.floor(this.gridHeight / 2);
+    const decorTypes = ['tree', 'campfire', 'tent', 'fence'];
+    const decorType = decorTypes[this.settlementAdditions.length % decorTypes.length];
+
+    for (let r = 1; r <= 5; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          const nx = kx + dx;
+          const ny = ky + dy;
+          if (this.isValidTile(nx, ny)) {
+            const t = this.grid[ny][nx];
+            if (!t.covered && t.terrain === 'grass' && !t.building && !this.settlementAdditions.some(a => a.x === nx && a.y === ny)) {
+              this.settlementAdditions.push({ x: nx, y: ny, type: decorType });
+              this.addFloatingText('🔨 Rozbudowa!', nx * this.tileSize + 20, ny * this.tileSize, '#a5d6a7');
+              this.notify('🔨 Osadnicy rozbudowali obejście bazy (+2% postępu)! Postawiono nowe obozowisko.', '🔨');
+              return;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Scout neighbor safe tile for House colony building
+  scoutHouseNeighborSafeTile() {
+    const houses = this.placedBuildings.filter(b => b.type === 'house');
+    if (houses.length === 0) return;
+    const house = houses[Math.floor(Math.random() * houses.length)];
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const nx = house.x + dx;
+        const ny = house.y + dy;
+        if (this.isValidTile(nx, ny)) {
+          const t = this.grid[ny][nx];
+          if (t.covered && !t.danger && t.terrain !== 'water' && t.terrain !== 'sea') {
+            this.uncoverSafeTile(nx, ny);
+            this.notify(`🏠 Chata osadników zbadała sąsiednie bezpieczne pole [${nx}x${ny}]!`, '🏠');
+            return;
+          }
+        }
+      }
+    }
+  }
+
+  // Water splash particle for dolphins
+  spawnWaterSplash(x, y) {
+    this.waterSplashes.push({ x, y, radius: 4, life: 0.6, maxLife: 0.6 });
+    for (let i = 0; i < 4; i++) {
+      this.particles.push({
+        x, y,
+        vx: (Math.random() - 0.5) * 40,
+        vy: -Math.random() * 30 - 10,
+        life: 0.5,
+        color: '#e1f5fe'
+      });
+    }
+  }
+
+  // Update Commander Display in Ribbon
+  updateCommanderDisplay() {
+    const avatarEl = document.getElementById('commanderAvatarDisplay');
+    const nameEl = document.getElementById('commanderNameDisplay');
+    if (avatarEl) avatarEl.textContent = this.commanderAvatar || '🧙‍♂️';
+    if (nameEl) nameEl.textContent = this.commanderName || 'Król Artur';
+  }
+
+  // Strategic Building Placement on Click
+  attemptBuild(tx, ty, type) {
+    if (!this.isValidTile(tx, ty)) return;
+    const tile = this.grid[ty][tx];
+    const cost = this.buildingCosts[type] || 50;
+
+    if (tile.covered) {
+      this.notify('⚠️ Najpierw odkryj ten teren, aby móc na nim budować!', '⚠️');
+      return;
+    }
+    if (tile.terrain === 'water' || tile.terrain === 'sea') {
+      this.notify('⚠️ Nie można budować na głębokiej wodzie!', '🌊');
+      return;
+    }
+    if (tile.building) {
+      this.notify('⚠️ Na tym polu już stoi budynek!', '🏰');
+      return;
+    }
+    if (this.resources < cost) {
+      this.notify(`⚠️ Brak wystarczających zasobów złota! Wymagane: ${cost} 💰`, '💰');
+      return;
+    }
+
+    // Deduct cost and place
+    this.resources -= cost;
+    tile.building = {
+      type,
+      hp: 100,
+      maxHp: 100,
+      level: 1
+    };
+    this.placedBuildings.push({ x: tx, y: ty, type });
+    sfx.playConstruct();
+    this.createDirtSparks(tx * this.tileSize + 24, ty * this.tileSize + 24);
+    this.addFloatingText(`🔨 ${type.toUpperCase()}`, tx * this.tileSize + 20, ty * this.tileSize - 10, '#ffd54f');
+
+    // Immediate building effect:
+    if (type === 'watchtower') {
+      for (let dy = -2; dy <= 2; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const nx = tx + dx;
+          const ny = ty + dy;
+          if (this.isValidTile(nx, ny)) {
+            const nt = this.grid[ny][nx];
+            if (nt.covered && !nt.danger && nt.terrain !== 'water' && nt.terrain !== 'sea') {
+              this.uncoverSafeTile(nx, ny);
+            }
+          }
+        }
+      }
+      this.notify('🏹 Wieża Strażnicza odsłoniła bezpieczne otoczenie!', '🏹');
+    } else if (type === 'wonder') {
+      this.royalSeals += 2;
+      localStorage.setItem('ks_seals', this.royalSeals.toString());
+      for (let i = 0; i < 4; i++) {
+        this.autoRevealRandomSafeTile();
+      }
+      this.notify('🏛️ Cud Świata roztoczył aurę i odkrył 4 bezpieczne prowincje (+2 👑)!', '🏛️');
+    } else if (type === 'settler') {
+      this.workersTotal++;
+      this.workersIdle++;
+      this.notify('🐎 Karawana Osadników założyła nową osadę (+1 robotnik)!', '🐎');
+    } else if (type === 'barracks') {
+      this.sappersMax++;
+      this.sappers++;
+      this.notify('🛡️ Koszary wojenne wyszkoliły dodatkowego sapera (+1 ⛑️)!', '🛡️');
+    } else {
+      this.notify(`🔨 Zbudowano pomyślnie obiekt: ${type}!`, '🔨');
+    }
+
+    this.selectedBuildingType = null;
+    document.querySelectorAll('.build-card').forEach(c => c.classList.remove('active'));
     this.updateUI();
   }
 
@@ -1335,27 +1838,111 @@ class KeepsweeperGame {
   }
 
   updateEntities(dt) {
-    // Sapper movement to dig site
-    const speed = (this.activeHeroPerk === 'hermes_boots' ? 140 : 80);
+    const speed = (this.activeHeroPerk === 'hermes_boots' ? 1400 : 850);
 
+    // Sappers walking to dig with Water Obstacle Avoidance
     this.sappersList.forEach(s => {
       if (s.state === 'walking_to_dig' && s.digTile) {
         const dx = s.targetX - s.x;
         const dy = s.targetY - s.y;
         const dist = Math.hypot(dx, dy);
 
-        if (dist > 4) {
-          s.x += (dx / dist) * speed * dt;
-          s.y += (dy / dist) * speed * dt;
-          s.walkAnim = (s.walkAnim || 0) + dt * 10;
+        if (dist > 8) {
+          let moveX = (dx / dist) * speed * dt;
+          let moveY = (dy / dist) * speed * dt;
+
+          // Water collision avoidance: sappers cannot walk through deep water!
+          const testTileX = Math.floor((s.x + moveX) / this.tileSize);
+          const testTileY = Math.floor((s.y + moveY) / this.tileSize);
+          if (this.isValidTile(testTileX, testTileY)) {
+            const tTerrain = this.grid[testTileY][testTileX].terrain;
+            if (tTerrain === 'water') {
+              const tileOnlyX = Math.floor((s.x + moveX) / this.tileSize);
+              const tileCurY = Math.floor(s.y / this.tileSize);
+              const canMoveX = this.isValidTile(tileOnlyX, tileCurY) && this.grid[tileCurY][tileOnlyX].terrain !== 'water';
+
+              const tileCurX = Math.floor(s.x / this.tileSize);
+              const tileOnlyY = Math.floor((s.y + moveY) / this.tileSize);
+              const canMoveY = this.isValidTile(tileCurX, tileOnlyY) && this.grid[tileOnlyY][tileCurX].terrain !== 'water';
+
+              if (canMoveX) moveY = 0;
+              else if (canMoveY) moveX = 0;
+              else { moveX = 0; moveY = 0; }
+            }
+          }
+
+          s.x += moveX;
+          s.y += moveY;
+          s.walkAnim = (s.walkAnim || 0) + dt * 25;
           s.facing = dx < 0 ? -1 : 1;
         } else {
-          // Arrived! Dig now!
+          // Arrived! Dig immediately!
           s.state = 'digging';
           this.executeSapperDigAt(s, s.digTile.tx, s.digTile.ty);
         }
       }
     });
+
+    // Living Ocean: Update Sailing Caravels
+    const waterTiles = this.grid ? this.grid.flat().filter(t => t.terrain === 'water' || t.terrain === 'sea') : [];
+    this.oceanShips.forEach(ship => {
+      ship.bobbing += dt * 3;
+      const dx = ship.targetX - ship.x;
+      const dy = ship.targetY - ship.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 6) {
+        ship.angle = Math.atan2(dy, dx);
+        ship.x += (dx / dist) * ship.speed * dt;
+        ship.y += (dy / dist) * ship.speed * dt;
+      } else {
+        if (waterTiles.length > 0) {
+          const nextT = waterTiles[Math.floor(Math.random() * waterTiles.length)];
+          ship.targetX = nextT.x * this.tileSize + 8;
+          ship.targetY = nextT.y * this.tileSize + 8;
+        }
+      }
+    });
+
+    // Living Ocean: Spawn Dolphins periodically
+    this.dolphinSpawnTimer = (this.dolphinSpawnTimer || 0) - dt;
+    if (this.dolphinSpawnTimer <= 0) {
+      this.dolphinSpawnTimer = 3.5 + Math.random() * 4.0;
+      if (waterTiles.length > 0) {
+        const startT = waterTiles[Math.floor(Math.random() * waterTiles.length)];
+        const angle = Math.random() * Math.PI * 2;
+        const jumpDist = 32 + Math.random() * 24;
+        const endX = startT.x * this.tileSize + Math.cos(angle) * jumpDist;
+        const endY = startT.y * this.tileSize + Math.sin(angle) * jumpDist;
+        this.dolphins.push({
+          startX: startT.x * this.tileSize + 16,
+          startY: startT.y * this.tileSize + 16,
+          endX,
+          endY,
+          progress: 0,
+          duration: 1.2,
+          peakHeight: 22
+        });
+        this.spawnWaterSplash(startT.x * this.tileSize + 16, startT.y * this.tileSize + 16);
+      }
+    }
+
+    // Update Dolphins
+    for (let i = this.dolphins.length - 1; i >= 0; i--) {
+      const d = this.dolphins[i];
+      d.progress += dt / d.duration;
+      if (d.progress >= 1.0) {
+        this.spawnWaterSplash(d.endX, d.endY);
+        this.dolphins.splice(i, 1);
+      }
+    }
+
+    // Update Water Splashes
+    for (let i = this.waterSplashes.length - 1; i >= 0; i--) {
+      const sp = this.waterSplashes[i];
+      sp.life -= dt;
+      sp.radius += dt * 15;
+      if (sp.life <= 0) this.waterSplashes.splice(i, 1);
+    }
 
     // Floating text particles
     for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
@@ -1474,6 +2061,84 @@ class KeepsweeperGame {
 
     this.workers.forEach(w => drawChar(Sprites.cache.worker, w));
     this.sappersList.forEach(s => drawChar(Sprites.cache.sapper, s));
+
+    // 3. Draw Living Colony Additions (trees, campfires, tents, fences around camp)
+    this.settlementAdditions.forEach(decor => {
+      const px = decor.x * this.tileSize;
+      const py = decor.y * this.tileSize;
+      this.ctx.font = '22px sans-serif';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      const icon = decor.type === 'campfire' ? '🔥' :
+                  (decor.type === 'tent' ? '⛺' :
+                  (decor.type === 'tree' ? '🌳' : '🪵'));
+      this.ctx.fillText(icon, px + this.tileSize / 2, py + this.tileSize / 2);
+    });
+
+    // 4. Draw Living Ocean: Sailing Caravels
+    this.oceanShips.forEach(ship => {
+      this.ctx.save();
+      this.ctx.translate(ship.x, ship.y + Math.sin(ship.bobbing) * 2);
+      this.ctx.rotate(ship.angle);
+      if (Sprites.cache.ship) {
+        this.ctx.drawImage(Sprites.cache.ship, -18, -18, 36, 36);
+      }
+      this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      this.ctx.lineWidth = 1.5;
+      this.ctx.beginPath();
+      this.ctx.moveTo(-20, -4);
+      this.ctx.lineTo(-28, -8);
+      this.ctx.moveTo(-20, 4);
+      this.ctx.lineTo(-28, 8);
+      this.ctx.stroke();
+      this.ctx.restore();
+    });
+
+    // 5. Draw Living Ocean: Water Splashes
+    this.waterSplashes.forEach(sp => {
+      const alpha = Math.max(0, sp.life / sp.maxLife);
+      this.ctx.strokeStyle = `rgba(179, 229, 252, ${alpha})`;
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.arc(sp.x, sp.y, sp.radius, 0, Math.PI * 2);
+      this.ctx.stroke();
+    });
+
+    // 6. Draw Living Ocean: Leaping Dolphins
+    this.dolphins.forEach(d => {
+      const currX = d.startX + d.progress * (d.endX - d.startX);
+      const baseCurrY = d.startY + d.progress * (d.endY - d.startY);
+      const arcY = baseCurrY - Math.sin(d.progress * Math.PI) * d.peakHeight;
+      const angle = Math.atan2((d.endY - d.startY), (d.endX - d.startX)) + (d.progress - 0.5) * 0.8;
+      this.ctx.save();
+      this.ctx.translate(currX, arcY);
+      this.ctx.rotate(angle);
+      if (Sprites.cache.dolphin) {
+        this.ctx.drawImage(Sprites.cache.dolphin, -14, -14, 28, 28);
+      }
+      this.ctx.restore();
+    });
+
+    // 7. Building Placement Ghost cursor
+    if (this.selectedBuildingType && this.hoverTile) {
+      const hpx = this.hoverTile.x * this.tileSize;
+      const hpy = this.hoverTile.y * this.tileSize;
+      const hTile = this.grid[this.hoverTile.y][this.hoverTile.x];
+      const canBuild = !hTile.covered && hTile.terrain !== 'water' && hTile.terrain !== 'sea' && !hTile.building;
+
+      this.ctx.fillStyle = canBuild ? 'rgba(76, 175, 80, 0.35)' : 'rgba(244, 67, 54, 0.35)';
+      this.ctx.fillRect(hpx, hpy, this.tileSize, this.tileSize);
+      this.ctx.strokeStyle = canBuild ? '#4caf50' : '#f44336';
+      this.ctx.lineWidth = 2;
+      this.ctx.strokeRect(hpx + 1, hpy + 1, this.tileSize - 2, this.tileSize - 2);
+
+      const bSprite = Sprites.cache[this.selectedBuildingType] || Sprites.cache.house;
+      if (bSprite) {
+        this.ctx.globalAlpha = 0.65;
+        this.ctx.drawImage(bSprite, hpx, hpy, this.tileSize, this.tileSize);
+        this.ctx.globalAlpha = 1.0;
+      }
+    }
 
     // Floating text indicators
     this.floatingTexts.forEach(ft => {
@@ -1618,6 +2283,20 @@ class KeepsweeperGame {
     const sealsEl = document.getElementById('sealsDisplay');
     if (sealsEl) sealsEl.textContent = this.royalSeals.toString();
 
+    // Mines Remaining Counter (Total mines - flagged tiles)
+    const flaggedCount = this.grid ? this.grid.flat().filter(t => t.flagged || t.oracleFlag).length : 0;
+    const remainingMines = Math.max(0, (this.totalMines || 0) - flaggedCount);
+    const minesEl = document.getElementById('minesDisplayCounter');
+    if (minesEl) minesEl.textContent = `${remainingMines}/${this.totalMines || 0}`;
+
+    // Update window title with Continent name, grid dimensions & bomb count
+    const titleEl = document.getElementById('titleText');
+    if (titleEl) {
+      titleEl.textContent = `Keepsweeper: Nowy Świat - ${this.activeContinentName} (${this.gridWidth}x${this.gridHeight}) | Miny: ${remainingMines}/${this.totalMines || 0}`;
+    }
+
+    this.updateCommanderDisplay();
+
     const heroBadge = document.getElementById('heroBadge');
     if (heroBadge) {
       const p = this.heroPerks.find(x => x.id === this.activeHeroPerk);
@@ -1645,13 +2324,18 @@ class KeepsweeperGame {
     this.isGameOver = true;
     sfx.playVictory();
 
+    // Tally correct flags upon match completion (fair anti-cheat)
+    const correctFlags = this.grid ? this.grid.flat().filter(t => t.flagged && t.danger).length : 0;
+    const flagPoints = Math.round(correctFlags * 0.1 * 10) / 10;
+    this.score = Math.round((this.score + flagPoints) * 10) / 10;
+
     const mins = Math.floor(this.elapsedSeconds / 60).toString().padStart(2, '0');
     const secs = (this.elapsedSeconds % 60).toString().padStart(2, '0');
     const timeStr = `${mins}:${secs}`;
 
     const matchRecord = {
       id: Date.now(),
-      commander: this.activeCommander,
+      commander: this.commanderName || this.activeCommander,
       date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       mode: this.mode,
       level: this.level,
@@ -1942,6 +2626,125 @@ class KeepsweeperGame {
     bindClick('btnLeftGridToggle', () => {
       this.showGrid = !this.showGrid;
     });
+
+    // Commander Profile Modal & 8 Avatars
+    bindClick('btnCommanderProfile', () => {
+      const modal = document.getElementById('modalCommanderProfile');
+      if (!modal) return;
+      const nameInput = document.getElementById('inputCommanderName');
+      if (nameInput) nameInput.value = this.commanderName;
+      document.querySelectorAll('.avatar-card').forEach(card => {
+        card.classList.toggle('active', card.dataset.avatar === this.commanderAvatar);
+      });
+      modal.style.display = 'flex';
+    });
+
+    document.querySelectorAll('.avatar-card').forEach(card => {
+      card.addEventListener('click', () => {
+        document.querySelectorAll('.avatar-card').forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+        const nameInput = document.getElementById('inputCommanderName');
+        if (nameInput && card.dataset.name) {
+          nameInput.value = card.dataset.name;
+        }
+      });
+    });
+
+    bindClick('btnSaveCommanderProfile', () => {
+      const nameInput = document.getElementById('inputCommanderName');
+      const activeCard = document.querySelector('.avatar-card.active');
+      if (nameInput && nameInput.value.trim()) {
+        this.commanderName = nameInput.value.trim();
+        localStorage.setItem('ks_commander_name', this.commanderName);
+      }
+      if (activeCard && activeCard.dataset.avatar) {
+        this.commanderAvatar = activeCard.dataset.avatar;
+        localStorage.setItem('ks_commander_avatar', this.commanderAvatar);
+      }
+      this.updateCommanderDisplay();
+      const modal = document.getElementById('modalCommanderProfile');
+      if (modal) modal.style.display = 'none';
+      this.notify(`👑 Dowódca zaktualizowany: ${this.commanderAvatar} ${this.commanderName}!`, '👑');
+    });
+
+    // Mission Restart with Confirmation
+    const restartMissionFn = () => {
+      if (confirm('🔄 Czy na pewno chcesz zresetować obecną planszę od nowa?')) {
+        this.startLevel(this.mode, this.level);
+        this.notify('🔄 Plansza zresetowana. Misja rozpoczęta od nowa!', '🔄');
+      }
+    };
+    bindClick('menuRestartMission', restartMissionFn);
+    bindClick('btnRestartMissionAction', restartMissionFn);
+
+    // Legend Minimization Toggle
+    const btnLegendToggle = document.getElementById('btnToggleLegendDetails');
+    const legendList = document.getElementById('legendContentList');
+    if (btnLegendToggle && legendList) {
+      btnLegendToggle.addEventListener('click', () => {
+        const isHidden = legendList.style.display === 'none';
+        legendList.style.display = isHidden ? 'flex' : 'none';
+        btnLegendToggle.textContent = isHidden ? '▼' : '▲';
+      });
+    }
+
+    // Build Cards Palette Click Handling
+    document.querySelectorAll('.build-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const type = card.dataset.build;
+        if (this.selectedBuildingType === type) {
+          this.selectedBuildingType = null;
+          card.classList.remove('active');
+          this.notify('Anulowano tryb budowy.', '❌');
+        } else {
+          document.querySelectorAll('.build-card').forEach(c => c.classList.remove('active'));
+          this.selectedBuildingType = type;
+          card.classList.add('active');
+          const cost = this.buildingCosts[type] || 50;
+          this.notify(`🔨 Wybierz odkryte pole pod budowę: ${card.querySelector('b')?.textContent || type} (${cost} 💰)`, '🔨');
+        }
+      });
+    });
+
+    // Version Changelog Expand Toggle
+    const verText = document.getElementById('settingsVersionText');
+    const featList = document.getElementById('settingsFeaturesList');
+    if (verText && featList) {
+      verText.addEventListener('click', () => {
+        const isCollapsed = featList.style.maxHeight === '0px' || featList.style.display === 'none';
+        featList.style.display = isCollapsed ? 'block' : 'none';
+        featList.style.maxHeight = isCollapsed ? '160px' : '0px';
+      });
+    }
+
+    // Settings Number Font & Tile Frame Selectors
+    const numFontSel = document.getElementById('settingNumberFontSelect');
+    if (numFontSel) {
+      numFontSel.value = this.numberFont;
+      numFontSel.addEventListener('change', (e) => {
+        this.numberFont = e.target.value;
+        localStorage.setItem('ks_number_font', this.numberFont);
+      });
+    }
+
+    const tileFrameSel = document.getElementById('settingTileFrameSelect');
+    if (tileFrameSel) {
+      tileFrameSel.value = this.tileFrame;
+      tileFrameSel.addEventListener('change', (e) => {
+        this.tileFrame = e.target.value;
+        localStorage.setItem('ks_tile_frame', this.tileFrame);
+      });
+    }
+
+    const quickContSel = document.getElementById('quickContinentSelect');
+    if (quickContSel) {
+      quickContSel.value = this.selectedContinent;
+      quickContSel.addEventListener('change', (e) => {
+        this.selectedContinent = e.target.value;
+        localStorage.setItem('ks_continent', this.selectedContinent);
+        this.startLevel(this.mode, 1);
+      });
+    }
 
     // Modal Close Buttons
     document.querySelectorAll('.modal-close').forEach(btn => {

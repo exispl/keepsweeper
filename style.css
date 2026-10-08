@@ -365,10 +365,10 @@ body.theme-colonization .colonization-ribbon {
 }
 
 body.theme-win95 .colonization-ribbon {
-  background: var(--win-bg);
-  border-top: 2px solid var(--win-dark);
-  border-bottom: 2px solid var(--win-light);
-  color: #212121;
+  background: #008080;
+  border-top: 2px solid #005050;
+  border-bottom: 2px solid #00aaaa;
+  color: #ffffff;
 }
 
 body.theme-light .colonization-ribbon {
@@ -399,6 +399,8 @@ body.theme-azure .colonization-ribbon {
   border-radius: 4px;
   font-size: 13px;
   font-weight: 700;
+  white-space: nowrap;
+  color: #fff;
 }
 
 body.theme-light .ribbon-item {
@@ -417,8 +419,16 @@ body.theme-azure .ribbon-item {
   background: #ffffff;
   border-color: #81d4fa;
   color: #013a5e;
-}  white-space: nowrap;
-  color: #fff;
+}
+
+body.theme-win95 .ribbon-item {
+  background: #000000 !important;
+  border: 2px inset #808080 !important;
+  color: #ffffff !important;
+}
+
+body.theme-win95 .ribbon-label {
+  color: #00e676 !important;
 }
 
 .ribbon-icon { font-size: 15px; }
@@ -457,6 +467,43 @@ body.theme-azure .ribbon-item {
   padding: 1px 6px;
   border-radius: 3px;
   border: 1px solid #00e676;
+  text-shadow: 0 0 6px rgba(0, 230, 118, 0.7);
+}
+
+.led-mines {
+  color: #ff9100;
+  font-family: var(--font-led);
+  font-size: 15px;
+  font-weight: bold;
+  background: #211000;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid #ff9100;
+  text-shadow: 0 0 6px rgba(255, 145, 0, 0.7);
+}
+
+body.theme-win95 .led-gold {
+  background: #000;
+  color: #ffd700;
+  text-shadow: 0 0 6px #ffd700;
+}
+
+body.theme-win95 .led-skuchy {
+  background: #2b0000;
+  color: #ff5252;
+  text-shadow: 0 0 6px #ff5252;
+}
+
+body.theme-win95 .led-timer {
+  background: #001f0c;
+  color: #00e676;
+  text-shadow: 0 0 6px #00e676;
+}
+
+body.theme-win95 .led-mines {
+  background: #211000;
+  color: #ff9100;
+  text-shadow: 0 0 6px #ff9100;
 }
 
 .ribbon-btn {
@@ -621,15 +668,15 @@ body.theme-colonization .game-viewport {
   border: 1px solid #ffd54f;
 }
 
-/* Right Colonization Sidebar */
+/* Right Colonization Sidebar - Enlarged (340px) with high readability */
 .colonization-right-sidebar {
-  width: 250px;
+  width: 340px;
   background: #3e220e;
   border-left: 3px solid #231206;
   display: flex;
   flex-direction: column;
-  padding: 6px;
-  gap: 6px;
+  padding: 8px;
+  gap: 8px;
   overflow-y: auto;
   flex-shrink: 0;
   color: #ffecb3;
@@ -639,7 +686,7 @@ body.theme-colonization .game-viewport {
   background: #251306;
   border: 1px solid #552f14;
   border-radius: 6px;
-  padding: 6px 8px;
+  padding: 8px 10px;
   box-shadow: inset 0 0 6px rgba(0,0,0,0.5);
 }
 
@@ -648,10 +695,10 @@ body.theme-colonization .game-viewport {
   justify-content: space-between;
   align-items: center;
   font-weight: bold;
-  font-size: 11px;
+  font-size: 12.5px;
   color: #ffd54f;
   border-bottom: 1px solid #4a270f;
-  padding-bottom: 4px;
+  padding-bottom: 5px;
   margin-bottom: 6px;
 }
 
@@ -691,22 +738,22 @@ body.theme-colonization .game-viewport {
 }
 
 .unit-card-details b {
-  font-size: 12px;
+  font-size: 13.5px;
   color: #ffffff;
   display: block;
 }
 
 .unit-card-details div {
-  font-size: 10px;
+  font-size: 11.5px;
   color: #ffe082;
 }
 
 .unit-badge {
   background: #2e7d32;
   color: #fff;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 4px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: bold;
 }
 
@@ -714,29 +761,29 @@ body.theme-colonization .game-viewport {
 .settlement-body {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 6px;
 }
 
-.settlement-icon { font-size: 26px; }
+.settlement-icon { font-size: 28px; }
 
 .settlement-info b {
-  font-size: 12px;
+  font-size: 13.5px;
   color: #ffffff;
   display: block;
 }
 
 #settlementNextGoal {
-  font-size: 10px;
+  font-size: 11.5px;
   color: #ffe082 !important;
 }
 
 .tier-pill {
   background: #1565c0;
   color: #fff;
-  padding: 1px 6px;
+  padding: 2px 8px;
   border-radius: 4px;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: bold;
 }
 
@@ -898,35 +945,101 @@ body.theme-meadow .tile-bonuses-list { background: #e8f5e9; border-color: #a5d6a
 body.theme-azure .tile-bonuses-list { background: #e1f5fe; border-color: #81d4fa; }
 
 .bonus-pill {
-  font-size: 10px;
-  color: #ffe082;
-  font-weight: 500;
+  font-size: 11.5px;
+  color: #ffecb3;
+  font-weight: 600;
+  padding: 2px 4px;
 }
 
 .bonus-pill b {
   color: #69f0ae;
 }
 
+body.theme-light .bonus-pill {
+  color: #1b5e20 !important;
+  background: #e8f5e9;
+  border-radius: 3px;
+  padding: 3px 6px;
+  border: 1px solid #c8e6c9;
+}
+
+body.theme-light .bonus-pill b {
+  color: #004d40 !important;
+}
+
+body.theme-meadow .bonus-pill {
+  color: #143513 !important;
+  background: #e8f5e9;
+  border-radius: 3px;
+  padding: 3px 6px;
+  border: 1px solid #a5d6a7;
+}
+
+body.theme-azure .bonus-pill {
+  color: #01579b !important;
+  background: #e1f5fe;
+  border-radius: 3px;
+  padding: 3px 6px;
+  border: 1px solid #81d4fa;
+}
+
 /* Legend Box */
 .legend-content-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-height: 120px;
+  gap: 5px;
+  max-height: 140px;
   overflow-y: auto;
-  font-size: 10px;
+  font-size: 11.5px;
   color: #ffffff;
 }
 
 .legend-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: #ffffff;
 }
 
 .legend-row b {
   color: #ffd54f;
+}
+
+body.theme-light .legend-content-list,
+body.theme-light .legend-row {
+  color: #212121 !important;
+}
+
+body.theme-light .legend-row b {
+  color: #3e2723 !important;
+}
+
+body.theme-light .unit-card-details b,
+body.theme-light .settlement-info b {
+  color: #212121 !important;
+}
+
+body.theme-light .unit-card-details div,
+body.theme-light #settlementNextGoal {
+  color: #424242 !important;
+}
+
+body.theme-light .panel-box {
+  background: #ffffff !important;
+  border: 1px solid #d7ccc8 !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06) !important;
+  color: #212121 !important;
+}
+
+body.theme-light .panel-box-header {
+  color: #3e2723 !important;
+  border-bottom: 1px solid #eceff1 !important;
+}
+
+body.theme-light .colonization-right-sidebar {
+  background: #fbf8f2 !important;
+  border-left: 3px solid #d7ccc8 !important;
+  color: #212121 !important;
 }
 
 /* Palettes */
@@ -1301,4 +1414,96 @@ body.theme-win95 .action-btn {
 
 .screen-shake {
   animation: screenShake 0.4s ease-in-out;
+}
+
+/* Custom Scrollbars */
+.colonization-right-sidebar::-webkit-scrollbar,
+.legend-content-list::-webkit-scrollbar,
+#settingsFeaturesList::-webkit-scrollbar,
+.recent-matches-table-wrap::-webkit-scrollbar,
+.hero-perks-grid::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+.colonization-right-sidebar::-webkit-scrollbar-track,
+.legend-content-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+.colonization-right-sidebar::-webkit-scrollbar-thumb,
+.legend-content-list::-webkit-scrollbar-thumb {
+  background: #ffb300;
+  border-radius: 4px;
+}
+body.theme-light .colonization-right-sidebar::-webkit-scrollbar-thumb,
+body.theme-light .legend-content-list::-webkit-scrollbar-thumb {
+  background: #8d7b68;
+}
+
+/* Commander Profile Pill in Ribbon */
+.commander-profile-pill {
+  cursor: pointer;
+  background: #1a237e;
+  color: #ffffff !important;
+  border: 1px solid #7986cb;
+  transition: all 0.2s ease;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.commander-profile-pill:hover {
+  background: #283593;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* 8 Avatars Grid & Cards */
+.avatars-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+.avatar-card {
+  background: #f5f5f5;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  padding: 10px 6px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.avatar-card:hover {
+  border-color: #1976d2;
+  background: #e3f2fd;
+  transform: translateY(-2px);
+}
+.avatar-card.active {
+  border-color: #2e7d32;
+  background: #e8f5e9;
+  box-shadow: 0 0 0 2px #2e7d32;
+}
+.avatar-emoji {
+  font-size: 32px;
+  line-height: 1;
+}
+.avatar-card b {
+  font-size: 12px;
+  color: #212121;
+}
+.avatar-card span {
+  font-size: 10px;
+  color: #666;
+}
+
+/* Build Palette Active Card */
+.build-card.active {
+  border-color: #ffeb3b !important;
+  background: #4e342e !important;
+  box-shadow: 0 0 8px #ffeb3b;
 }

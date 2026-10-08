@@ -54,6 +54,8 @@ const Sprites = {
     this.cache.dragon_cave = this.drawDragonCave();
     this.cache.lake = this.drawLakeTile();
     this.cache.sea = this.drawSeaTile();
+    this.cache.ship = this.drawShip();
+    this.cache.dolphin = this.drawDolphin();
 
     // Colonization Settlement Evolution Tiers
     this.cache.settlement_camp = this.drawCampSettlement();
@@ -94,61 +96,67 @@ const Sprites = {
     return canvas;
   },
 
-  // Red Flag marker
+  // Red Flag marker - Perfectly Centered on 48x48 tile
   drawFlagTile() {
     const s = this.tileSize;
     const { canvas, ctx } = this.makeCanvas(s, s);
 
     ctx.drawImage(this.cache.covered || this.drawCoveredTile(), 0, 0);
 
-    // Pole
+    // Pole centered at x = 20
     ctx.fillStyle = '#3e2723';
-    ctx.fillRect(13, 8, 3, 23);
-    // Base
+    ctx.fillRect(20, 8, 3, 27);
+    // Base centered around x = 24
     ctx.fillStyle = '#212121';
-    ctx.fillRect(9, 28, 11, 4);
-    // Red Banner
+    ctx.fillRect(14, 34, 16, 5);
+    ctx.fillStyle = '#424242';
+    ctx.fillRect(16, 32, 12, 2);
+
+    // Red Banner extending rightwards (x: 23 to 39)
     ctx.fillStyle = '#d50000';
     ctx.beginPath();
-    ctx.moveTo(16, 8);
-    ctx.lineTo(31, 14);
-    ctx.lineTo(16, 20);
+    ctx.moveTo(23, 8);
+    ctx.lineTo(39, 16);
+    ctx.lineTo(23, 24);
     ctx.closePath();
     ctx.fill();
 
-    // Gold crest star
+    // Gold crest star in banner
     ctx.fillStyle = '#ffd600';
-    ctx.fillRect(19, 13, 3, 3);
+    ctx.fillRect(26, 14, 4, 4);
 
     return canvas;
   },
 
-  // Golden Flag (Oracle True Sight Marker)
+  // Golden Flag (Oracle True Sight Marker) - Centered
   drawGoldenFlag() {
     const s = this.tileSize;
     const { canvas, ctx } = this.makeCanvas(s, s);
 
     ctx.drawImage(this.cache.covered || this.drawCoveredTile(), 0, 0);
 
-    // Golden staff
+    // Golden staff centered at x = 20
     ctx.fillStyle = '#ffd700';
-    ctx.fillRect(13, 7, 3, 25);
+    ctx.fillRect(20, 7, 3, 28);
+    // Base
     ctx.fillStyle = '#212121';
-    ctx.fillRect(9, 29, 11, 3);
+    ctx.fillRect(14, 34, 16, 5);
+    ctx.fillStyle = '#ffd54f';
+    ctx.fillRect(16, 32, 12, 2);
 
     // Ornate Golden Pennant
     ctx.fillStyle = '#ffb300';
     ctx.beginPath();
-    ctx.moveTo(16, 7);
-    ctx.lineTo(33, 14);
-    ctx.lineTo(16, 21);
+    ctx.moveTo(23, 7);
+    ctx.lineTo(41, 16);
+    ctx.lineTo(23, 25);
     ctx.closePath();
     ctx.fill();
 
     // Eye of Horus / Oracle Crystal
     ctx.fillStyle = '#00e5ff';
     ctx.beginPath();
-    ctx.arc(21, 14, 3, 0, Math.PI * 2);
+    ctx.arc(28, 16, 3, 0, Math.PI * 2);
     ctx.fill();
 
     return canvas;
@@ -1378,19 +1386,131 @@ const Sprites = {
     const { canvas, ctx } = this.makeCanvas(s, s);
     ctx.drawImage(this.drawClassicCoveredTile(), 0, 0);
 
-    // Classic black pole and triangle flag
+    // Classic black pole centered at x = 20
     ctx.fillStyle = '#000000';
-    ctx.fillRect(14, 8, 3, 22);
-    ctx.fillRect(9, 28, 14, 4);
-    ctx.fillRect(12, 26, 8, 2);
+    ctx.fillRect(20, 8, 3, 26);
+    ctx.fillRect(14, 32, 16, 5);
+    ctx.fillRect(18, 29, 8, 3);
 
+    // Red flag extending rightwards
     ctx.fillStyle = '#ff0000';
     ctx.beginPath();
-    ctx.moveTo(17, 8);
-    ctx.lineTo(30, 14);
-    ctx.lineTo(17, 20);
+    ctx.moveTo(23, 8);
+    ctx.lineTo(38, 15);
+    ctx.lineTo(23, 22);
     ctx.closePath();
     ctx.fill();
+
+    return canvas;
+  },
+
+  // 10. Living Ocean: Oceanic Sailing Ship / Caravel (36x36)
+  drawShip() {
+    const { canvas, ctx } = this.makeCanvas(36, 36);
+
+    // Wooden Hull
+    ctx.fillStyle = '#5d4037';
+    ctx.beginPath();
+    ctx.moveTo(4, 24);
+    ctx.lineTo(32, 24);
+    ctx.lineTo(28, 31);
+    ctx.lineTo(8, 31);
+    ctx.closePath();
+    ctx.fill();
+
+    // Dark trim
+    ctx.fillStyle = '#3e2723';
+    ctx.fillRect(6, 23, 24, 2);
+
+    // Main Mast
+    ctx.fillStyle = '#4e342e';
+    ctx.fillRect(17, 6, 2, 18);
+    // Fore Mast
+    ctx.fillRect(9, 10, 2, 14);
+
+    // White Billowing Sails
+    ctx.fillStyle = '#ffffff';
+    // Main Sail
+    ctx.beginPath();
+    ctx.moveTo(19, 7);
+    ctx.quadraticCurveTo(28, 13, 19, 19);
+    ctx.lineTo(19, 7);
+    ctx.fill();
+    ctx.strokeStyle = '#cfd8dc';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Fore Sail
+    ctx.beginPath();
+    ctx.moveTo(11, 11);
+    ctx.quadraticCurveTo(18, 15, 11, 20);
+    ctx.lineTo(11, 11);
+    ctx.fill();
+
+    // Red Cross of the Navigator on Main Sail
+    ctx.fillStyle = '#d32f2f';
+    ctx.fillRect(22, 11, 2, 5);
+    ctx.fillRect(20, 13, 6, 2);
+
+    // Pennant Flag on Top Mast
+    ctx.fillStyle = '#fbc02d';
+    ctx.beginPath();
+    ctx.moveTo(18, 6);
+    ctx.lineTo(24, 8);
+    ctx.lineTo(18, 10);
+    ctx.closePath();
+    ctx.fill();
+
+    return canvas;
+  },
+
+  // 11. Living Ocean: Jumping Dolphin (28x28)
+  drawDolphin() {
+    const { canvas, ctx } = this.makeCanvas(28, 28);
+
+    // Sleek Dolphin Body (Curved arc in jump)
+    ctx.fillStyle = '#37474f';
+    ctx.beginPath();
+    ctx.ellipse(14, 14, 11, 5, -Math.PI / 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // White/Light Grey Underbelly
+    ctx.fillStyle = '#eceff1';
+    ctx.beginPath();
+    ctx.ellipse(14, 16, 8, 3, -Math.PI / 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Dorsal Fin
+    ctx.fillStyle = '#263238';
+    ctx.beginPath();
+    ctx.moveTo(12, 10);
+    ctx.lineTo(15, 6);
+    ctx.lineTo(16, 11);
+    ctx.closePath();
+    ctx.fill();
+
+    // Fluke / Tail
+    ctx.beginPath();
+    ctx.moveTo(4, 21);
+    ctx.lineTo(1, 24);
+    ctx.lineTo(3, 19);
+    ctx.closePath();
+    ctx.fill();
+
+    // Beak / Snout
+    ctx.fillStyle = '#37474f';
+    ctx.beginPath();
+    ctx.moveTo(22, 9);
+    ctx.lineTo(26, 8);
+    ctx.lineTo(23, 11);
+    ctx.closePath();
+    ctx.fill();
+
+    // Eye
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(20, 10, 2, 2);
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(21, 10, 1, 1);
 
     return canvas;
   }

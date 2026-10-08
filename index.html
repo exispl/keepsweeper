@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Lato:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="theme-colonization font-montserrat">
+<body class="theme-light font-montserrat cursor-sword" oncontextmenu="return false;">
 
   <!-- Main Game Window (Dual Style: Wood Colonization Frame or Classic Win95) -->
   <div class="game-window" id="appWindow">
@@ -20,7 +20,7 @@
       <div class="title-left">
         <span class="title-icon">🏰</span>
         <span data-i18n="gameTitle" id="titleText">Keepsweeper: Nowy Świat</span>
-        <span class="version-tag" id="appVersionBadge">v1.4.0</span>
+        <span class="version-tag" id="appVersionBadge">v1.5.0</span>
         <!-- Dual Engine Switcher Button -->
         <button class="engine-switch-btn" id="btnEngineSwitch" title="Przełącz silnik gry: Kolonizacja (Civ/RPG) ⇄ Klasyczny Saper Win95">
           <span id="engineBadgeIcon">🌲</span>
@@ -40,8 +40,11 @@
     <!-- Menu Bar -->
     <div class="win95-menubar">
       <div class="menu-item" id="menuPlay" data-i18n="menuPlay">Graj</div>
+      <div class="menu-item" id="menuRestartMission" title="Zresetuj obecną planszę z potwierdzeniem">
+        <span>🔄 </span><span>Restart</span>
+      </div>
       <div class="menu-item" id="menuModeSwitch">
-        <span>🔄 </span><span data-i18n="menuMode">Zmień Silnik</span>
+        <span>🕹️ </span><span data-i18n="menuMode">Zmień Silnik</span>
       </div>
       <div class="menu-item" id="menuTrade">
         <span>🚢 </span><span data-i18n="menuTrade">Handel</span>
@@ -50,7 +53,7 @@
         <span>⚡ </span><span data-i18n="menuSuperhero">SuperBohater</span>
       </div>
       <div class="menu-item" id="menuLeaderboard">
-        <span>📈 </span><span data-i18n="menuLeaderboard">Ranking & Pasmo</span>
+        <span>🏆 </span><span data-i18n="menuLeaderboard">Ranking & Pasmo</span>
       </div>
       <div class="menu-item" id="menuResearch">
         <span>🏛️ </span><span data-i18n="menuResearch">Badania</span>
@@ -58,8 +61,21 @@
       </div>
       <div class="menu-item" id="menuSettings" data-i18n="menuSettings">Ustawienia</div>
       <div class="menu-item" id="menuHelp" data-i18n="menuHelp">Pomoc</div>
-      <!-- Quick Difficulty Switcher (Łatwy, Średni, Trudny) -->
+      <!-- Quick Continent Switcher (Polska, Afryka, Europa, itp.) -->
       <div style="margin-left: auto; display: flex; align-items: center; gap: 4px; padding-right: 6px;">
+        <span style="font-size: 11px; font-weight: bold; color: inherit;">LĄD:</span>
+        <select id="quickContinentSelect" style="font-size: 11px; font-weight: bold; padding: 2px 5px; border-radius: 3px;" title="Wybierz kształt kontynentu lub losuj co grę">
+          <option value="random">🎲 Nowa Mapa co Grę</option>
+          <option value="polska" selected>🇵🇱 Polska (Realny Kształt)</option>
+          <option value="afryka">🌍 Afryka</option>
+          <option value="europa">🌍 Europa</option>
+          <option value="ameryka_pld">🌎 Ameryka Płd.</option>
+          <option value="ameryka_pln">🌎 Ameryka Płn.</option>
+          <option value="australia">🌏 Australia</option>
+        </select>
+      </div>
+      <!-- Quick Difficulty Switcher (Łatwy, Średni, Trudny) -->
+      <div style="display: flex; align-items: center; gap: 4px; padding-right: 6px;">
         <span style="font-size: 11px; font-weight: bold; color: inherit;">TRUDNOŚĆ:</span>
         <select id="quickDifficultySelect" style="font-size: 11px; font-weight: bold; padding: 2px 5px; border-radius: 3px;">
           <option value="beginner">🟢 Łatwy (Pionier - 10% min, 5 saperów)</option>
@@ -112,37 +128,44 @@
         <span class="ribbon-val" id="workersCount">3/3</span>
       </div>
 
-      <!-- 6. Blunders / Skuchy Counter (Ściśle liczone!) -->
+      <!-- 6. Mines Counter (Miny pozostałe / Wszystkie bomby) -->
+      <div class="ribbon-item mines-box" id="minesStatusBox" title="Licznik min: Miny pozostałe (ogółem minus postawione flagi)">
+        <span class="ribbon-icon">💣</span>
+        <span class="ribbon-label">Miny:</span>
+        <span class="ribbon-val led-mines" id="minesDisplayCounter">35/35</span>
+      </div>
+
+      <!-- 7. Blunders / Skuchy Counter (Ściśle liczone!) -->
       <div class="ribbon-item skuchy-box" title="Licznik skuch (Trafienia na miny / straty saperów)">
         <span class="ribbon-icon">💥</span>
         <span class="ribbon-label">Skuchy:</span>
         <span class="ribbon-val led-skuchy" id="skuchyCounter">0</span>
       </div>
 
-      <!-- 7. Timer (Osobno dla rankingów i speedrunów) -->
+      <!-- 8. Timer (Osobno dla rankingów i speedrunów) -->
       <div class="ribbon-item timer-box" title="Czas meczu (Rejestrowany osobno do rankingów i wykresów)">
         <span class="ribbon-icon">⏱️</span>
         <span class="ribbon-label">Czas:</span>
         <span class="ribbon-val led-timer" id="levelTimer">00:00</span>
       </div>
 
-      <!-- 8. Uncovered Tiles -->
+      <!-- 9. Uncovered Tiles -->
       <div class="ribbon-item uncovered-box" title="Odkryte kafelki / Postęp mapy">
         <span class="ribbon-icon">🗺️</span>
         <span class="ribbon-val" id="uncoveredCounter">000</span>
       </div>
 
-      <!-- 9. Score / Prestiż (+0.1 pkt za każdą poprawną flagę postawioną na minie) -->
-      <div class="ribbon-item score-box" title="Punkty i Prestiż: +0.1 pkt za każdą poprawną flagę postawioną na minie!">
-        <span class="ribbon-icon">⚖️</span>
-        <span class="ribbon-label">Punkty:</span>
-        <span class="ribbon-val led-gold" id="scoreCounter">0.0 pts</span>
+      <!-- 10. Active Commander Perk Badge -->
+      <div class="ribbon-item hero-badge" id="heroBadge" title="Kliknij, aby otworzyć panel Bohatera (Awans co 50 odkrytych pól)">
+        <span id="heroIcon">⚡</span>
+        <span id="heroNameText">Bohater: Siódmy Zmysł</span>
       </div>
 
-      <!-- 10. Active Commander Perk Badge -->
-      <div class="ribbon-item hero-badge" id="heroBadge" title="Aktywny Talent SuperBohatera (Awans co 10 odkrytych pól)">
-        <span id="heroIcon">⚡</span>
-        <span id="heroNameText">Siódmy Zmysł (1% Auto)</span>
+      <!-- 11. Commander Avatar & Profile Selector -->
+      <div class="ribbon-item commander-profile-pill" id="btnCommanderProfile" title="Kliknij, aby zmienić imię i awatar dowódcy (8 awatarów)">
+        <span id="commanderAvatarDisplay" style="font-size: 16px;">🧙‍♂️</span>
+        <b id="commanderNameDisplay" style="font-size: 11.5px; color: inherit;">Król Artur</b>
+        <span style="font-size: 10px; opacity: 0.8;">✏️</span>
       </div>
     </div>
 
@@ -277,58 +300,58 @@
 
     </div>
 
-    <!-- Building Palette -->
+    <!-- Building Palette with Strategic Hover Tooltips -->
     <div class="build-palette" id="buildPalette">
-      <div class="build-card" data-build="house">
+      <div class="build-card" data-build="house" title="🏠 Chata Kolonisty (40 💰): Co 10 odkrytych pól osadnicy sami badają 1 losowe sąsiednie bezpieczne pole!">
         <span>🏠</span>
         <div>
           <b data-i18n="buildingHouse">Chata</b>
           <div class="cost-tag">💰 40</div>
         </div>
       </div>
-      <div class="build-card" data-build="barracks">
+      <div class="build-card" data-build="barracks" title="🛡️ Koszary Wojenne (80 💰): Co 25 pól wojsko oczyszcza 2 sąsiednie pola i daje +1 zapasowego sapera!">
         <span>🛡️</span>
         <div>
           <b data-i18n="buildingBarracks">Koszary</b>
           <div class="cost-tag">💰 80</div>
         </div>
       </div>
-      <div class="build-card" data-build="watchtower">
+      <div class="build-card" data-build="watchtower" title="🏹 Wieża Strażnicza (60 💰): Poluje na dzikie bestie i natychmiast odsłania bezpieczny ląd w promieniu 2 kratek wokół siebie!">
         <span>🏹</span>
         <div>
           <b data-i18n="buildingWatchtower">Wieża</b>
           <div class="cost-tag">💰 60</div>
         </div>
       </div>
-      <div class="build-card" data-build="market">
+      <div class="build-card" data-build="market" title="🏪 Targ Handlowy (100 💰): Generuje +10 złota co każde 10 odkrytych pól i obniża koszty w handlu zamorskim!">
         <span>🏪</span>
         <div>
           <b data-i18n="buildingMarket">Targ</b>
           <div class="cost-tag">💰 100</div>
         </div>
       </div>
-      <div class="build-card" data-build="farm">
+      <div class="build-card" data-build="farm" title="🌾 Farma Kolonii (50 💰): Zaopatruje załogę, dając dodatkowe +1 złota za każde odkryte pole!">
         <span>🌾</span>
         <div>
           <b data-i18n="buildingFarm">Farma</b>
           <div class="cost-tag">💰 50</div>
         </div>
       </div>
-      <div class="build-card" data-build="wall">
+      <div class="build-card" data-build="wall" title="🧱 Mur Obronny (15 💰): Wzmacnia obronę sektora i zabezpiecza osadę przed atakiem ze smoczych jaskiń!">
         <span>🧱</span>
         <div>
           <b data-i18n="buildingWall">Mur</b>
           <div class="cost-tag">💰 15</div>
         </div>
       </div>
-      <div class="build-card" data-build="wonder">
+      <div class="build-card" data-build="wonder" title="🏛️ Cud Świata (150 💰): Natychmiast odkrywa 4 bezpieczne pola na mapie i roztacza królewską aurę nietykalności!">
         <span>🏛️</span>
         <div>
           <b data-i18n="buildingWonder">Cud Świata</b>
           <div class="cost-tag">💰 150</div>
         </div>
       </div>
-      <div class="build-card" data-build="settler">
+      <div class="build-card" data-build="settler" title="🐎 Karawana Osadników (70 💰): Zakłada nową pod-osadę na odległym bezpiecznym terenie!">
         <span>🐎</span>
         <div>
           <b data-i18n="buildingSettler">Osadnicy</b>
@@ -378,15 +401,15 @@
       <button class="win-btn" id="btnClosePowers" style="padding: 2px 8px; height: 100%;">✕</button>
     </div>
 
-    <!-- Bottom Action Ribbon (Screenshot inspired) -->
+    <!-- Bottom Action Ribbon -->
     <div class="win95-action-bar" id="bottomActionBar">
       <button class="action-btn" id="btnCenterMap" title="Wycentruj widok na stolicy / osadzie">
         <span>🎯</span>
         <span>Centrum</span>
       </button>
-      <button class="action-btn" id="btnToggleFlagMode" title="1x PPM stawia flagę; na dotyku włącza tryb flagi">
-        <span>🚩</span>
-        <span id="flagModeLabel">Flaga</span>
+      <button class="action-btn" id="btnRestartMissionAction" title="Zresetuj obecną planszę z potwierdzeniem">
+        <span>🔄</span>
+        <span>Restart</span>
       </button>
       <button class="action-btn" id="btnBuildToggle">
         <span>🔨</span>
@@ -405,11 +428,79 @@
         <span>Bohater</span>
       </button>
       <button class="action-btn" id="btnStatsToggle">
-        <span>📈</span>
-        <span>Pasmo & Wykres</span>
+        <span>🏆</span>
+        <span>Ranking & Pasmo</span>
       </button>
     </div>
 
+  </div>
+
+  <!-- Modal: Wybór Profilu Dowódcy i Awatara (8 Awatarów: 3 męskie, 3 żeńskie, 2 roboty) -->
+  <div class="modal-overlay" id="modalCommanderProfile" oncontextmenu="return false;">
+    <div class="modal-window" style="width: 540px;">
+      <div class="modal-header">
+        <span>👑 Wybór Dowódcy & Awatara</span>
+        <button class="win-btn modal-close">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 16px;">
+        <div style="margin-bottom: 14px;">
+          <label style="font-weight: bold; font-size: 12px; display: block; margin-bottom: 4px;">Imię dowódcy:</label>
+          <input type="text" id="inputCommanderName" value="Król Artur" style="width: 100%; padding: 6px 10px; font-size: 13px; font-weight: bold; border: 2px inset #999; border-radius: 4px;">
+        </div>
+
+        <div style="font-weight: bold; font-size: 12px; margin-bottom: 8px;">Wybierz swój awatar (8 postaci: 3 męskie, 3 żeńskie, 2 roboty):</div>
+        <div class="avatars-grid" id="avatarsGrid">
+          <!-- 3 Męskie -->
+          <div class="avatar-card active" data-avatar="🧙‍♂️" data-name="Król Artur">
+            <div class="avatar-emoji">🧙‍♂️</div>
+            <b>Król Artur</b>
+            <span>Władca Magów</span>
+          </div>
+          <div class="avatar-card" data-avatar="🤴" data-name="Książę Jan">
+            <div class="avatar-emoji">🤴</div>
+            <b>Książę Jan</b>
+            <span>Rycerz Korony</span>
+          </div>
+          <div class="avatar-card" data-avatar="🤠" data-name="Kapitan Drake">
+            <div class="avatar-emoji">🤠</div>
+            <b>Kapitan Drake</b>
+            <span>Wilk Morski</span>
+          </div>
+
+          <!-- 3 Żeńskie -->
+          <div class="avatar-card" data-avatar="👸" data-name="Królowa Wiktoria">
+            <div class="avatar-emoji">👸</div>
+            <b>Królowa Wiktoria</b>
+            <span>Cesarzowa Mórz</span>
+          </div>
+          <div class="avatar-card" data-avatar="🧝‍♀️" data-name="Zwiadowczyni Elen">
+            <div class="avatar-emoji">🧝‍♀️</div>
+            <b>Elen Leśna</b>
+            <span>Sokolniczka</span>
+          </div>
+          <div class="avatar-card" data-avatar="👩‍✈️" data-name="Admirał Isabella">
+            <div class="avatar-emoji">👩‍✈️</div>
+            <b>Isabella</b>
+            <span>Admirał Floty</span>
+          </div>
+
+          <!-- 2 Roboty -->
+          <div class="avatar-card" data-avatar="🤖" data-name="Cyber RX-9">
+            <div class="avatar-emoji">🤖</div>
+            <b>Cyber RX-9</b>
+            <span>Automat Saperski</span>
+          </div>
+          <div class="avatar-card" data-avatar="🦾" data-name="Mecha-01">
+            <div class="avatar-emoji">🦾</div>
+            <b>Mecha-01</b>
+            <span>Cybor-Kolonizator</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: flex-end; gap: 8px;">
+        <button class="action-btn modal-close" id="btnSaveCommanderProfile" style="background: #2e7d32; color: #fff; font-weight: bold;">Zatwierdź Wybór 💾</button>
+      </div>
+    </div>
   </div>
 
   <!-- Modal: Foreign Trade Outpost (Screen for Trading Excavated Gold & Relics) -->
@@ -691,6 +782,30 @@
             </select>
           </div>
 
+          <!-- Czcionka cyferek saperskich -->
+          <div class="setting-row">
+            <span>Czcionka cyferek (Saper):</span>
+            <select id="settingNumberFontSelect">
+              <option value="montserrat" selected>Montserrat Ultra Bold (Nowoczesna)</option>
+              <option value="pixel">Win95 Retro Pixel (8-bit)</option>
+              <option value="segoe">Segoe UI Black (Ultra Pogrubiona)</option>
+              <option value="impact">Impact (Zwarta & Mocna)</option>
+              <option value="consolas">Consolas / Terminal (Monospace)</option>
+            </select>
+          </div>
+
+          <!-- Styl ramki kafelków -->
+          <div class="setting-row">
+            <span>Styl ramki kafelków:</span>
+            <select id="settingTileFrameSelect">
+              <option value="bevel" selected>Windows 95 Klasyczny 3D Bevel</option>
+              <option value="flat">Płaski Nowoczesny Obrys</option>
+              <option value="gold">Królewska Złota Ramka</option>
+              <option value="wood">Rustykalna Osadnicza Drewniana</option>
+              <option value="none">Bez Ramki (Czysty Teren)</option>
+            </select>
+          </div>
+
           <!-- Wybór ładniejszego kursora -->
           <div class="setting-row">
             <span>Kursor myszy (Styl retro):</span>
@@ -727,18 +842,23 @@
           <!-- Wersja gry -->
           <div class="setting-row" style="margin-top: 6px; padding-top: 6px; border-top: 1px solid #bbb;">
             <span data-i18n="settingVersion">Wersja gry:</span>
-            <span id="settingsVersionText" style="font-family: monospace; font-weight: bold; color: #1565c0;">v1.4.1</span>
+            <span id="settingsVersionText" style="font-family: monospace; font-weight: bold; color: #1565c0; cursor: pointer; text-decoration: underline;" title="Kliknij, aby rozwinąć / zwinąć pełną kronikę">v1.5.0 (Kronika Zmian 📜)</span>
           </div>
 
           <!-- Wykaz nowości -->
           <div class="setting-row" style="flex-direction: column; align-items: flex-start; gap: 4px; padding-top: 4px; border-bottom: none;">
-            <span style="font-size: 11px; color: #555; font-weight: bold;">Zainstalowane nowości:</span>
-            <div id="settingsFeaturesList" style="font-size: 11px; color: #333; background: #fff; border: 1px inset #808080; padding: 4px 6px; width: 100%; max-height: 80px; overflow-y: auto;">
-              • Powiększone pola 48x48 i ultra-wyraźne cyfry z czarnym obrysem (neonowa zielona 2)<br>
-              • 3 poziomy trudności (Łatwy 10% min, Średni 15% min, Trudny 21% min)<br>
-              • Nowe motywy: Jasny Pergamin, Jasna Zieleń, Jasny Błękit Morski<br>
-              • Natychmiastowe 1x PPM dla flag, kilof na środku i saperzy czuwający na polach<br>
-              • Zoom kółkiem myszy na minimapie i interaktywny samouczek krok po kroku
+            <span style="font-size: 11px; color: #555; font-weight: bold;">Zainstalowane nowości (v1.5.0):</span>
+            <div id="settingsFeaturesList" style="font-size: 11px; color: #333; background: #fff; border: 1px inset #808080; padding: 6px 8px; width: 100%; max-height: 120px; overflow-y: auto; line-height: 1.45;">
+              • ⛵ <b>Żyjący Ocean:</b> Karawele pływające wzdłuż wybrzeży oraz delfiny 🐬 wyskakujące łukami z wody z kropelkami wody<br>
+              • 🚫 <b>Uczciwy system flag:</b> Usunięto natychmiastowe +0.1 pkt za flagi (punkty i celność naliczane wyłącznie po zwycięstwie)<br>
+              • 🎯 <b>Wyśrodkowane flagi:</b> Czerwone i złote flagi usytuowane w idealnym centrum każdego kafelka 48x48<br>
+              • 👑 <b>8 Awatarów Dowódcy:</b> 3 męskie, 3 żeńskie i 2 roboty z możliwością wpisania własnego imienia<br>
+              • 🏹 <b>6 Plemion Indian:</b> Irokezi, Siuksowie, Komancze, Majowie, Algonkini, Apacze ze zwiadem bezpiecznych pól<br>
+              • 🔨 <b>Budowanie obiektów:</b> Chata, Koszary, Wieża, Targ, Farma, Mur, Cud Świata z unikalnymi korzyściami w grze<br>
+              • 🇵🇱 <b>Mapa Polski:</b> Realny kontur z Morzem Bałtyckim, Mazurami, Karpatami i lądowaniem na plaży<br>
+              • 🌲 <b>Chodzenie po lądzie & Ewolucja:</b> Jednostki omijają głęboką wodę; co 2% postępu osada stawia nowe obejście<br>
+              • 💣 <b>Licznik min:</b> Pokazuje miny pozostałe / ogółem (np. 28/35)<br>
+              • ⚡ <b>Balans Bohaterów:</b> Start z 1 talentem; 2. odblokowuje się po odkryciu pierwszych 50 kafelków
             </div>
           </div>
         </div>
@@ -787,7 +907,7 @@
   </div>
 
   <!-- Modal: First-Time Discovery Notification Popup -->
-  <div class="modal-overlay" id="modalDiscovery" style="z-index: 9999;">
+  <div class="modal-overlay" id="modalDiscovery" style="z-index: 9999;" oncontextmenu="return false;">
     <div class="modal-window" style="width: 480px; border: 3px solid #f57f17; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
       <div class="modal-header" style="background: linear-gradient(90deg, #f57f17, #fbc02d); color: #000; font-weight: bold;">
         <span id="discoveryHeaderTitle">🧭 Nowe Odkrycie w Nowym Świecie!</span>
